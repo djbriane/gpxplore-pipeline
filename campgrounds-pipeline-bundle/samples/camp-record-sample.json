@@ -1,0 +1,58 @@
+[
+  {
+    "i": "170102030103-1371",
+    "n": "Copper Creek Campground",
+    "t": "campground",
+    "y": 47.07833,
+    "x": -112.61944,
+    "r": "fcfs",
+    "f": 1,
+    "rc": "likely",
+    "c": 100,
+    "w": 1,
+    "rt": 1,
+    "u": "https://www.fs.usda.gov/recarea/hlcnf/recarea/?recid=62849",
+    "tn": "Lincoln, MT",
+    "d": "moderate"
+  },
+  {
+    "i": "170102030206-1372",
+    "n": "Aspen Grove Campground",
+    "t": "campground",
+    "y": 46.97861,
+    "x": -112.53139,
+    "r": "fcfs",
+    "f": 1,
+    "rc": "likely",
+    "c": 165,
+    "w": 1,
+    "rt": 1,
+    "u": "https://www.fs.usda.gov/recarea/hlcnf/recarea/?recid=62847",
+    "tn": "Lincoln, MT",
+    "d": "moderate"
+  },
+  {
+    "i": "57203",
+    "n": "Judith Landing",
+    "t": "campground",
+    "y": 47.73889,
+    "x": -109.62324,
+    "r": "fcfs",
+    "f": null,
+    "rc": "likely",
+    "st": "MT",
+    "sub": "Campground"
+  },
+  {
+    "i": "8123",
+    "n": "Dog Valley Campground",
+    "t": "dispersed",
+    "y": 39.5658,
+    "x": -120.0564,
+    "r": "fcfs",
+    "f": 0,
+    "rc": "likely",
+    "c": 40,
+    "d": "minimal"
+  }
+]

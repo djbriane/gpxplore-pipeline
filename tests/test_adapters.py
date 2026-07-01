@@ -1,0 +1,160 @@
+"""Adapter tests with small hand-built fixtures -> expected canonical output."""
+
+import csv
+import tempfile
+import unittest
+from pathlib import Path
+
+from pipeline import common
+from pipeline.normalize import id_ as id_adapter
+from pipeline.normalize import mt as mt_adapter
+from pipeline.normalize import usfs as usfs_adapter
+
+
+def _write_csv(rows, fieldnames) -> Path:
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, newline="", encoding="utf-8")
+    writer = csv.DictWriter(tmp, fieldnames=fieldnames)
+    writer.writeheader()
+    for r in rows:
+        writer.writerow(r)
+    tmp.close()
+    return Path(tmp.name)
+
+
+class UsfsAdapterTests(unittest.TestCase):
+    FIELDS = [
+        "latitude", "longitude", "site_id", "globalid", "site_name", "public_site_name",
+        "site_subtype", "development_scale", "nrrs_id", "total_capacity", "fee_charged",
+        "water_availability", "restroom_availability", "closest_towns", "recarea_description",
+    ]
+
+    def test_campground_row_normalized_and_wrong_subtype_dropped(self):
+        rows = [
+            {
+                "latitude": "47.07833", "longitude": "-112.61944", "site_id": "CG1",
+                "globalid": "{G1}", "site_name": "COPPER CREEK CAMPGROUND",
+                "public_site_name": "Copper Creek Campground", "site_subtype": "Campground",
+                "development_scale": "3", "nrrs_id": "", "total_capacity": "100",
+                "fee_charged": "Y", "water_availability": "No water is available",
+                "restroom_availability": "Vault toilet(s)", "closest_towns": "Lincoln, MT",
+                "recarea_description": "A nice campground.",
+            },
+            {  # wrong subtype -> filtered out
+                "latitude": "47.0", "longitude": "-112.0", "site_id": "TH1", "globalid": "",
+                "site_name": "SOME TRAILHEAD", "public_site_name": "", "site_subtype": "TRAILHEAD",
+                "development_scale": "1", "nrrs_id": "", "total_capacity": "",
+                "fee_charged": "N", "water_availability": "", "restroom_availability": "",
+                "closest_towns": "", "recarea_description": "",
+            },
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = usfs_adapter.normalize(path, "2026-05-20", "usfs_infra")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["source"], "usfs_infra")
+        self.assertEqual(p["site_id"], "CG1")
+        self.assertEqual(p["name"], "COPPER CREEK CAMPGROUND")
+        self.assertEqual(p["site_subtype"], "CAMPGROUND")
+        self.assertEqual(p["development_label"], "moderate")
+        self.assertEqual(p["total_capacity"], 100)
+        self.assertTrue(p["fee_charged"])
+        self.assertEqual(p["reservation_tier"], common.TIER_LIKELY_FCFS)
+        # Raw amenity text is carried through untouched (the semantic read is
+        # deferred to the compact stage).
+        self.assertEqual(p["water_availability"], "No water is available")
+        self.assertEqual(feats[0]["geometry"]["coordinates"], [-112.61944, 47.07833])
+
+
+class MtRollupTests(unittest.TestCase):
+    FIELDS = ["Facility Type", "Facility Name", "Park Name", "x", "y", "SITEID", "OBJECTID", "GlobalID", "COMMENTS"]
+
+    def test_campsites_roll_into_campground_and_infra_dropped(self):
+        # Mercator-ish coords near western MT; exact values don't matter here.
+        base_x, base_y = -12700000.0, 6000000.0
+        rows = [
+            {"Facility Type": "Campground (Utilities Available)", "Facility Name": "",
+             "Park Name": "Logan", "x": base_x, "y": base_y, "SITEID": "100", "OBJECTID": "1",
+             "GlobalID": "{A}", "COMMENTS": ""},
+            {"Facility Type": "Campsite", "Facility Name": "A1", "Park Name": "Logan",
+             "x": base_x + 10, "y": base_y + 10, "SITEID": "100", "OBJECTID": "2", "GlobalID": "{B}", "COMMENTS": ""},
+            {"Facility Type": "Campsite", "Facility Name": "A2", "Park Name": "Logan",
+             "x": base_x + 20, "y": base_y + 20, "SITEID": "100", "OBJECTID": "3", "GlobalID": "{C}", "COMMENTS": ""},
+            {"Facility Type": "Campsite", "Facility Name": "A3", "Park Name": "Logan",
+             "x": base_x + 30, "y": base_y + 30, "SITEID": "100", "OBJECTID": "4", "GlobalID": "{D}", "COMMENTS": ""},
+            {"Facility Type": "Restroom (Vault)", "Facility Name": "Camp Restroom", "Park Name": "Logan",
+             "x": base_x, "y": base_y, "SITEID": "100", "OBJECTID": "5", "GlobalID": "{E}", "COMMENTS": ""},
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = mt_adapter.normalize(path, "2026-05-20", "mt_state_parks")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1, "3 campsites + 1 campground + 1 restroom -> one campground POI")
+        p = feats[0]["properties"]
+        self.assertEqual(p["total_capacity"], 3)
+        self.assertEqual(p["name"], "Logan")
+        self.assertEqual(p["state"], "MT")
+        self.assertEqual(p["site_id"], "1")  # OBJECTID of the campground row
+
+    def test_synthesized_campground_when_no_parent(self):
+        base_x, base_y = -12700000.0, 6000000.0
+        rows = [
+            {"Facility Type": "Campsite", "Facility Name": "1", "Park Name": "West Shore",
+             "x": base_x, "y": base_y, "SITEID": "200", "OBJECTID": "10", "GlobalID": "{A}", "COMMENTS": ""},
+            {"Facility Type": "Campsite", "Facility Name": "2", "Park Name": "West Shore",
+             "x": base_x + 100, "y": base_y + 100, "SITEID": "200", "OBJECTID": "11", "GlobalID": "{B}", "COMMENTS": ""},
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = mt_adapter.normalize(path, "2026-05-20", "mt_state_parks")
+        finally:
+            path.unlink()
+        self.assertEqual(len(feats), 1)
+        self.assertEqual(feats[0]["properties"]["total_capacity"], 2)
+        self.assertEqual(feats[0]["properties"]["name"], "West Shore")
+
+
+class IdFilterTests(unittest.TestCase):
+    FIELDS = ["X", "Y", "name", "description", "objectid", "pic_url"]
+
+    def test_trail_and_banner_excluded_park_kept(self):
+        base_x, base_y = -13000000.0, 6200000.0
+        rows = [
+            {"X": base_x, "Y": base_y, "name": "Farragut State Park", "description": "camping",
+             "objectid": "1", "pic_url": ""},
+            {"X": base_x, "Y": base_y, "name": "Ashton-Tetonia Trail", "description": "",
+             "objectid": "2", "pic_url": ""},
+            {"X": base_x, "Y": base_y, "name": "Welcome to Idaho State Parks!", "description": "",
+             "objectid": "3", "pic_url": ""},
+            {"X": base_x, "Y": base_y, "name": "Coeur d'Alene Parkway", "description": "",
+             "objectid": "4", "pic_url": ""},
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = id_adapter.normalize(path, "2026-05-20", "id_state_parks")
+        finally:
+            path.unlink()
+        names = [f["properties"]["name"] for f in feats]
+        self.assertEqual(names, ["Farragut State Park"])
+
+    def test_override_deny_list_excludes_day_use_parks(self):
+        base_x, base_y = -13000000.0, 6200000.0
+        rows = [
+            {"X": base_x, "Y": base_y, "name": "Eagle Island State Park", "description": "",
+             "objectid": "5", "pic_url": ""},
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = id_adapter.normalize(path, "2026-05-20", "id_state_parks")
+        finally:
+            path.unlink()
+        self.assertEqual(feats, [])
+
+
+if __name__ == "__main__":
+    unittest.main()

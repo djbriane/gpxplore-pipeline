@@ -1,0 +1,94 @@
+{
+  "$comment": "Source registry for the campgrounds ingestion pipeline. One entry per upstream source. Add a new source by appending an entry here plus (if its raw shape is new) a matching adapter module in pipeline/normalize/<adapter>.py. Paths are relative to the repo root. See README.md.",
+  "sources": [
+    {
+      "id": "usfs",
+      "source_tag": "usfs_infra",
+      "adapter": "usfs",
+      "label": "USFS National Recreation Sites (INFRA)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/Recreation_Sites_INFRA.csv",
+        "offline_format": "csv",
+        "offline_sha256": "cdbdc4117d854d97fd0a2d2bd9fef8bbf0c99f8cfe5bb752a6f32dcbd8d5fa0d",
+        "live": {
+          "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_InfraRecreationSites_01/MapServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "blm",
+      "source_tag": "blm_recreation",
+      "adapter": "blm",
+      "label": "BLM National Recreation Site Points",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/BLM_National_Recreation_Site_Points_-2581447096637901266.csv",
+        "offline_format": "csv",
+        "offline_sha256": "b3b337ce8ae1860fa88c5fd764b581bbaf12779c663238dc39b03d70ab166a16",
+        "live": {
+          "url": "https://gis.blm.gov/arcgis/rest/services/recreation/BLM_Natl_Recreation_Offline/MapServer/2/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true,
+          "note": "Confirmed via `make blm-verify`: live count 9483 vs snapshot 9481, field aliases match exactly. Live geojson uses machine field names (FET_SUBTYPE, LAT, ...); the BLM adapter maps them (see blm.LIVE_FIELD_MAP). Offline remains the default; pass --live to use this."
+        }
+      }
+    },
+    {
+      "id": "mt",
+      "source_tag": "mt_state_parks",
+      "adapter": "mt",
+      "label": "Montana FWP State Parks facilities",
+      "fetch": {
+        "type": "manual_file",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/FWPLND_STATEPARKS_FACILITIES_PTS_7905798971970118109.csv",
+        "offline_format": "csv",
+        "offline_sha256": "693052ae10ffafdaa05126d93c8defeb1b6aba9fba54460bf7941dc3393aec70",
+        "live": {
+          "confirmed": false,
+          "note": "No live FeatureServer layer found exposing the granular facility-points table. Ships as manual-file for v1."
+        }
+      }
+    },
+    {
+      "id": "id",
+      "source_tag": "id_state_parks",
+      "adapter": "id",
+      "label": "Idaho Parks & Facilities",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/IDPR_Parks_and_Facilities.csv",
+        "offline_format": "csv",
+        "offline_sha256": "af38748bafc7a85a52340fcf56ac37a7d8dcb2d6d60cf14105b885a0334df446",
+        "live": {
+          "url": "https://services1.arcgis.com/CNPdEkvnGl65jCX8/arcgis/rest/services/IDPR_Parks_and_Facilities/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true
+        }
+      }
+    },
+    {
+      "id": "co",
+      "source_tag": "co_state_parks",
+      "adapter": "co",
+      "label": "Colorado campgrounds (Fishing Atlas)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/co_campgrounds.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "cc41bb4d969e08684721e27ae693bc4c31b6f1973a5b984312032cf45d850f6c",
+        "live": {
+          "url": "https://ndismaps.nrel.colostate.edu/arcgis/rest/services/FishingAtlas/FishingAtlas_Base_Map/MapServer/44/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true
+        }
+      }
+    }
+  ]
+}

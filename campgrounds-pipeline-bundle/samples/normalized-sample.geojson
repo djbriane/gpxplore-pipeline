@@ -1,0 +1,166 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -112.6194444,
+          47.07833333
+        ]
+      },
+      "properties": {
+        "source": "usfs_infra",
+        "site_id": "170102030103-1371",
+        "nrrs_id": null,
+        "global_id": "{78E43B5A-6055-46F6-BB1E-4B4362D746C9}",
+        "name": "COPPER CREEK CAMPGROUND",
+        "public_name": "Copper Creek Campground",
+        "state": null,
+        "closest_towns": "Lincoln, MT",
+        "elevation_ft": "feet",
+        "directions": "Travel east of Lincoln on Montana Highway 200 approximately 6 miles to Forest Road 330 (Copper Creek Road), then travel north approximately 8 miles to the campground.",
+        "site_subtype": "CAMPGROUND",
+        "development_scale": 3,
+        "development_label": "moderate",
+        "reservation_tier": "likely_fcfs",
+        "total_capacity": 100,
+        "fee_charged": true,
+        "fee_type": "EXPANDED AMENITY FEE",
+        "fee_description": "Overnight Use:\nSingle Site: $15 per night\nAdditional Vehicle: $5 per night",
+        "water_availability": "Yes, drinking water is available from a hand pump",
+        "restroom_availability": "Vault toilet(s)",
+        "pack_in_out": false,
+        "description": "This campground is located northeast of Lincoln. Snowbank Lake is located across the road from the campground. The campground is only a short two mile drive from the Indian Meadows Trailhead and access into the Scapegoat Wilderness.",
+        "important_info": null,
+        "restrictions": "Length of stay limited to 14 days",
+        "current_conditions": null,
+        "open_season": null,
+        "operational_hours": "Open 24 hours/day",
+        "operated_by": "US Forest Service",
+        "usda_portal_url": "https://www.fs.usda.gov/recarea/hlcnf/recarea/?recid=62849",
+        "last_update": "2025/12/22 13:41:32+00",
+        "ingest_hash": "3474fe34fd7061ba",
+        "snapshot_date": "2026-05-20"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -112.5313889,
+          46.97861111
+        ]
+      },
+      "properties": {
+        "source": "usfs_infra",
+        "site_id": "170102030206-1372",
+        "nrrs_id": null,
+        "global_id": "{1A2687E5-BC1E-46B6-9DFB-D5EE3F344D63}",
+        "name": "ASPEN GROVE CAMPGROUND",
+        "public_name": "Aspen Grove Campground",
+        "state": null,
+        "closest_towns": "Lincoln, MT",
+        "elevation_ft": "feet",
+        "directions": "GPS Info.(Latitude, Longitude):46.97861,-112.53139465843N,1123153WFrom Lincoln, Montana, take State Route 200 east for 6.5 miles to the campground sign. Turn right at the sign, onto a gravel road, and go .5 miles to campground. After entering the campground facility, follow the signs to the Picnic Area at the far east end of the campground, which also serves as the Group Use Area.",
+        "site_subtype": "CAMPGROUND",
+        "development_scale": 3,
+        "development_label": "moderate",
+        "reservation_tier": "likely_fcfs",
+        "total_capacity": 165,
+        "fee_charged": true,
+        "fee_type": "EXPANDED AMENITY FEE",
+        "fee_description": "Overnight Use:\nGroup Site: $50 per night",
+        "water_availability": "Yes, drinking water is available from a hand pump",
+        "restroom_availability": "Vault toilet(s)",
+        "pack_in_out": false,
+        "description": "Aspen Grove Group Campground sits in forested mountain terrain on the banks of the Blackfoot River in the Helena National Forest. At an elevation of 4,800 feet beneath a canopy of cottonwood, aspen, juniper, Lodgepole pine and Douglas fir, this campground is an ideal setting for larger families or groups seeking relaxation and recreation. Natural Features: Visitors to Helena National Forest are treated spectacular scenery as well as an abundance of natural and cultural resources in the area. Rugged ridges, alpine meadows, forests, grasslands and rivers provide wildlife diverse ecosystems. Grizzly bear, lynx, wolverine, deer, elk, gray wolf, moose, black bear, mountain lion, mountain goat and mountain sheep all call the area home.Recreation: Aspen Grove Group Campground offers outdoor enthusiasts the opportunity to hike, fish, bike and enjoy a long list of outdoor recreational activities throughout the year. Indian Meadows Trailhead, located approximately 9 miles from Aspen Grove, offers access to a number of hiking trails in the Scapegoat Wilderness. Alice Creek Trailhead, located approximately 15 miles from Aspen Grove, also offers hiking opportunities into the Scapegoat Wilderness and along the Lewis and Clark historic trail to Lewis and Clark Pass. The Blackfoot River, adjacent to the campground, is renowned for its recreational opportunities, most notably fly fishing. Blackfoot is a fast, cold river with many deep spots, making it prime habitat for populations of cutthroat, rainbow and brook trout. Nestled in the upper Blackfoot River drainage, Lincoln is a popular destination for big game hunting and snowmobiling. Facilities: Aspen Grove Group Campground has six sites, able to accommodate 40 people and a maximum of 15 vehicles, including trailers up to a maximum of 20 feet. Space is available for 10-15 four-person tents. The site is equipped with picnic tables, campfire rings, drinking water and vault toilets. Access to Blackfoot River is within walking distanc",
+        "important_info": null,
+        "restrictions": "The maximum trailer length is 50 feet. The duration of your stay may not exceed 14 days.",
+        "current_conditions": null,
+        "open_season": null,
+        "operational_hours": "Open 24 hours/day",
+        "operated_by": "US Forest Service",
+        "usda_portal_url": "https://www.fs.usda.gov/recarea/hlcnf/recarea/?recid=62847",
+        "last_update": "2025/12/22 13:41:45+00",
+        "ingest_hash": "ec7516451e7d9b59",
+        "snapshot_date": "2026-05-20"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -109.6232445,
+          47.73889408
+        ]
+      },
+      "properties": {
+        "source": "blm_recreation",
+        "object_id": "57203",
+        "global_id": "7f31de11-0456-40c7-bae7-4f2c98e2f770",
+        "name": "JUDITH LANDING",
+        "admin_state": "MT",
+        "admin_unit_code": "MTL07000",
+        "unit_name": null,
+        "feature_type": "10",
+        "feature_subtype": "Campground",
+        "development": "campground",
+        "reservable": null,
+        "has_fee": null,
+        "reservation_tier": "likely_fcfs",
+        "description": null,
+        "web_link": null,
+        "ingest_hash": "5d6309c91486512f",
+        "snapshot_date": "2026-05-20"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -120.0564,
+          39.5658
+        ]
+      },
+      "properties": {
+        "source": "usfs_infra",
+        "site_id": "8123",
+        "nrrs_id": null,
+        "global_id": "{093870E9-DA43-48B4-917D-EE4EB96CCEE3}",
+        "name": "DOG VALLEY CAMPGROUND",
+        "public_name": "Dog Valley Campground",
+        "state": null,
+        "closest_towns": null,
+        "elevation_ft": "feet",
+        "directions": null,
+        "site_subtype": "CAMPING AREA",
+        "development_scale": 1,
+        "development_label": "minimal",
+        "reservation_tier": "likely_fcfs",
+        "total_capacity": 40,
+        "fee_charged": false,
+        "fee_type": null,
+        "fee_description": null,
+        "water_availability": null,
+        "restroom_availability": null,
+        "pack_in_out": true,
+        "description": "DOG VALLEY CAMPGROUND (Camping Area)",
+        "important_info": null,
+        "restrictions": null,
+        "current_conditions": null,
+        "open_season": null,
+        "operational_hours": null,
+        "operated_by": null,
+        "usda_portal_url": null,
+        "last_update": "2025/12/11 10:54:52+00",
+        "ingest_hash": "b14c78ca6e0a7dbb",
+        "snapshot_date": "2026-05-20"
+      }
+    }
+  ]
+}

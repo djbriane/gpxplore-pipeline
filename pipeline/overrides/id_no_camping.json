@@ -1,0 +1,9 @@
+{
+  "_comment": "MANUALLY CURATED, NOT DERIVED DATA. The Idaho IDPR_Parks_and_Facilities source has one row per park and no structured field indicating whether a park actually has a campground (icon_color is constant; the description text inconsistently mentions camping). This is a hand-maintained deny-list of Idaho state parks that are day-use only / have no campground, so they are excluded from the campground layer. Names must match the source 'name' field exactly. Review this list whenever the ID snapshot is refreshed. See ARCHITECTURE.md and the pipeline README 'Known limitations' section. A better long-term fix is a properly-typed 'Campgrounds' source layer (see id-campground-vs-park research note).",
+  "no_camping": [
+    "Eagle Island State Park",
+    "Lucky Peak State Park",
+    "Old Mission State Park",
+    "Thousand Springs State Park"
+  ]
+}
