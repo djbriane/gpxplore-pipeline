@@ -37,13 +37,22 @@ def layer_fields(url: str, timeout: float = 60.0) -> list[str]:
 
 def layer_field_map(url: str, timeout: float = 60.0) -> list[tuple[str, str]]:
     """Return (name, alias) pairs from the layer metadata (strips '/query')."""
-    meta_url = url[: -len("/query")] if url.endswith("/query") else url
-    data = _get_json(meta_url, {"f": "json"}, timeout)
+    data = layer_metadata(url, timeout)
     return [
         (fld.get("name"), fld.get("alias") or fld.get("name"))
         for fld in data.get("fields", [])
         if fld.get("name")
     ]
+
+
+def layer_metadata(url: str, timeout: float = 60.0) -> dict[str, Any]:
+    """Return the layer's full metadata JSON (fields, extent, editingInfo, ...).
+
+    Strips a trailing '/query' so the same registry `live.url` used for
+    fetching can also be used to introspect the layer itself.
+    """
+    meta_url = url[: -len("/query")] if url.endswith("/query") else url
+    return _get_json(meta_url, {"f": "json"}, timeout)
 
 
 def paginate(

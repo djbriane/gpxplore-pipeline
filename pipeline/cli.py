@@ -2,9 +2,10 @@
 
     python3 -m pipeline.cli <stage> [options]
 
-Stages: fetch, normalize, merge, validate, compact, publish, pipeline (all),
-and blm-verify (a research helper - see the plan's blm-endpoint-verify task).
-The Makefile wraps these; see README.md.
+Stages: fetch, normalize, merge, validate, compact, publish, pipeline (all).
+Plus helpers: ios-snapshot, check-updates (is upstream newer than our
+snapshot?), and blm-verify (a research helper - see the plan's
+blm-endpoint-verify task). The Makefile wraps these; see README.md.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ import argparse
 import csv
 import sys
 
-from . import common, compact, fetch, ios_snapshot, merge, normalize, publish, validate
+from . import check_updates, common, compact, fetch, ios_snapshot, merge, normalize, publish, validate
 from .registry import get_source
 
 
@@ -71,6 +72,11 @@ def _cmd_pipeline(args) -> int:
         publish.run(target=args.publish_target, confirm=args.confirm)
     print("\nPipeline complete. Review data/reports/ and data/compact/ before publishing.")
     return 0
+
+
+def _cmd_check_updates(args) -> int:
+    results = check_updates.run(args.source)
+    return 1 if any(r.get("status") == check_updates.STATUS_POSSIBLE_UPDATE for r in results) else 0
 
 
 def _cmd_blm_verify(args) -> int:
@@ -184,6 +190,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     pb = sub.add_parser("blm-verify", help="diff candidate BLM live endpoint vs offline snapshot")
     pb.set_defaults(func=_cmd_blm_verify)
+
+    pu = sub.add_parser("check-updates", help="check whether upstream sources have changed since the pinned snapshot")
+    pu.add_argument("--source", help="single source id (default: all)")
+    pu.set_defaults(func=_cmd_check_updates)
 
     return p
 

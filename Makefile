@@ -18,7 +18,7 @@ SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
 CONFIRM_ARG = $(if $(CONFIRM),--confirm,)
 DOWNSTREAM_SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot=$(SNAPSHOT),)
 
-.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm ios-snapshot publish-downstream publish-all pipeline blm-verify test clean
+.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm ios-snapshot publish-downstream publish-all pipeline check-updates blm-verify test clean
 
 help:
 	@echo "Campgrounds ingestion pipeline"
@@ -35,6 +35,7 @@ help:
 	@echo "  make publish-downstream [CONFIRM=1]  Stage into gpxplore-web + build/copy iOS snapshot (dry run by default)"
 	@echo "  make publish-all [CONFIRM=1]  Run pipeline, then publish-downstream"
 	@echo "  make pipeline                Run fetch->normalize->merge->validate->compact"
+	@echo "  make check-updates [SOURCE=blm]  Check if a source changed upstream since our snapshot (network, read-only)"
 	@echo "  make blm-verify              Probe candidate BLM live endpoint vs snapshot"
 	@echo "  make test                    Run the unittest suite"
 	@echo "  make clean                   Remove generated data/ (keeps raw snapshots in the bundle)"
@@ -74,6 +75,9 @@ publish-all: pipeline publish-downstream
 
 pipeline:
 	$(PY) -m pipeline.cli pipeline
+
+check-updates:
+	$(PY) -m pipeline.cli check-updates $(SOURCE_ARG)
 
 blm-verify:
 	$(PY) -m pipeline.cli blm-verify

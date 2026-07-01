@@ -90,6 +90,7 @@ retired `.mjs` script. If that function's rules change, update this by hand.
 | publish | `make publish` | Writes the reviewable artifact to `data/publish/<date>/`; `--confirm` copies into an external `TARGET`. |
 | ios-snapshot | `make ios-snapshot` | Builds `gpxplore-ios`'s gzipped `campground-marker-index.json.gz` / `campground-detail.json.gz` from compact output, into `data/ios-snapshot/<date>/`. |
 | publish-downstream | `make publish-downstream` | Publishes into `gpxplore-web`, builds the iOS snapshot, and copies the result into `gpxplore-ios`. `CONFIRM=1` to write; see below. |
+| check-updates | `make check-updates` | Read-only: checks each source's live record count (network, no fetch/write) against the pinned offline snapshot and flags likely upstream changes. See below. |
 
 Every stage also has a direct CLI form, e.g. `python3 -m pipeline.cli validate --snapshot 2026-07-01`. Run `python3 -m pipeline.cli <stage> -h` for options. Per-source runs are supported where it makes sense: `make normalize SOURCE=mt`.
 
@@ -104,7 +105,7 @@ pipeline/
   fetch/                 # arcgis paginator + manual-file (offline) adapters
   normalize/             # one adapter module per source (usfs, blm, mt, id_, co)
     state_base.py        # shared canonical builder for the state adapters
-  merge.py validate.py compact.py publish.py ios_snapshot.py cli.py
+  merge.py validate.py compact.py publish.py ios_snapshot.py check_updates.py cli.py
   overrides/id_no_camping.json   # hand-curated Idaho day-use deny-list
 tests/                   # unittest suite (adapters, compact golden file, validate, common, ios snapshot)
 data/                    # all generated output (gitignored)
@@ -127,10 +128,15 @@ scripts/publish_downstream.sh   # cross-repo orchestration: gpxplore-web + gpxpl
        "offline_path": "campgrounds-pipeline-bundle/raw-sources/wy_parks.geojson",
        "offline_format": "geojson",
        "offline_sha256": "…",
+       "offline_snapshot_date": "2026-07-01",
        "live": { "url": "https://…/FeatureServer/0/query", "format": "geojson", "page_size": 1000, "confirmed": false }
      }
    }
    ```
+
+   `offline_snapshot_date` is the date the pinned raw file was pulled — set it
+   so `make check-updates` has a baseline (also add a row to
+   `raw-sources/MANIFEST.md`).
 
 2. **Reuse an adapter or add one.** If the raw shape matches an existing source,
    point `adapter` at it. Otherwise add `pipeline/normalize/wy.py` exposing:
@@ -169,6 +175,36 @@ fetched with `make fetch-live` (or `--live`):
 
 `make blm-verify` re-checks the BLM endpoint (row count + field aliases) before
 trusting live mode.
+
+## Checking whether it's time to refresh
+
+The raw snapshots are pinned in `campgrounds-pipeline-bundle/raw-sources/` and
+don't change until someone deliberately re-fetches. `make check-updates`
+answers "has anything changed upstream since then?" without fetching or
+writing anything:
+
+```bash
+make check-updates            # all sources
+make check-updates SOURCE=blm # just one
+```
+
+For each source with a confirmed live endpoint, it makes one lightweight
+ArcGIS metadata call (`returnCountOnly` + layer JSON — no data download) and
+compares the upstream record count against the offline snapshot's own count,
+plus the upstream `editingInfo.lastEditDate` when the service exposes it
+(only Idaho's does, in practice). A delta bigger than both 25 records and 1%
+is flagged as a **possible update** (`make check-updates` then exits
+non-zero, so it's CI/cron-friendly); smaller drift is reported but treated as
+routine upstream housekeeping. Montana has no live endpoint (see above), so
+it's reported as "no automated check available" — check its portal by hand
+(`SOURCES.md`).
+
+Record-count drift is a proxy, not proof — a source can rewrite existing rows
+without changing the count. If this flags something, the real confirmation
+is `make fetch-live SOURCE=<id>` followed by `make pipeline` and reading the
+validate-stage diff report, which is what applies here for content-level
+changes (per `raw-sources/MANIFEST.md`'s note that this should replace the
+"~3 years" cadence *assumption* over time, rather than hard-coding it).
 
 ## Intentional behavior changes vs. the old scripts
 

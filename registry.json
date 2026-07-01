@@ -11,6 +11,7 @@
         "offline_path": "campgrounds-pipeline-bundle/raw-sources/Recreation_Sites_INFRA.csv",
         "offline_format": "csv",
         "offline_sha256": "cdbdc4117d854d97fd0a2d2bd9fef8bbf0c99f8cfe5bb752a6f32dcbd8d5fa0d",
+        "offline_snapshot_date": "2026-05-20",
         "live": {
           "url": "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_InfraRecreationSites_01/MapServer/0/query",
           "format": "geojson",
@@ -29,6 +30,7 @@
         "offline_path": "campgrounds-pipeline-bundle/raw-sources/BLM_National_Recreation_Site_Points_-2581447096637901266.csv",
         "offline_format": "csv",
         "offline_sha256": "b3b337ce8ae1860fa88c5fd764b581bbaf12779c663238dc39b03d70ab166a16",
+        "offline_snapshot_date": "2026-05-20",
         "live": {
           "url": "https://gis.blm.gov/arcgis/rest/services/recreation/BLM_Natl_Recreation_Offline/MapServer/2/query",
           "format": "geojson",
@@ -48,6 +50,7 @@
         "offline_path": "campgrounds-pipeline-bundle/raw-sources/FWPLND_STATEPARKS_FACILITIES_PTS_7905798971970118109.csv",
         "offline_format": "csv",
         "offline_sha256": "693052ae10ffafdaa05126d93c8defeb1b6aba9fba54460bf7941dc3393aec70",
+        "offline_snapshot_date": "2026-05-20",
         "live": {
           "confirmed": false,
           "note": "No live FeatureServer layer found exposing the granular facility-points table. Ships as manual-file for v1."
@@ -64,6 +67,7 @@
         "offline_path": "campgrounds-pipeline-bundle/raw-sources/IDPR_Parks_and_Facilities.csv",
         "offline_format": "csv",
         "offline_sha256": "af38748bafc7a85a52340fcf56ac37a7d8dcb2d6d60cf14105b885a0334df446",
+        "offline_snapshot_date": "2026-05-20",
         "live": {
           "url": "https://services1.arcgis.com/CNPdEkvnGl65jCX8/arcgis/rest/services/IDPR_Parks_and_Facilities/FeatureServer/0/query",
           "format": "geojson",
@@ -82,6 +86,7 @@
         "offline_path": "campgrounds-pipeline-bundle/raw-sources/co_campgrounds.geojson",
         "offline_format": "geojson",
         "offline_sha256": "cc41bb4d969e08684721e27ae693bc4c31b6f1973a5b984312032cf45d850f6c",
+        "offline_snapshot_date": "2026-05-20",
         "live": {
           "url": "https://ndismaps.nrel.colostate.edu/arcgis/rest/services/FishingAtlas/FishingAtlas_Base_Map/MapServer/44/query",
           "format": "geojson",

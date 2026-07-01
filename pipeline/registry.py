@@ -33,6 +33,10 @@ class Source:
         return self.fetch.get("offline_sha256")
 
     @property
+    def offline_snapshot_date(self) -> str | None:
+        return self.fetch.get("offline_snapshot_date")
+
+    @property
     def live(self) -> dict[str, Any]:
         return self.fetch.get("live", {})
 
