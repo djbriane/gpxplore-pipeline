@@ -43,6 +43,41 @@ make publish TARGET=/path/to/gpx-route-planner/apps/planner/public/data
 make publish-confirm TARGET=/path/to/gpx-route-planner/apps/planner/public/data
 ```
 
+### Publishing to gpxplore-web and gpxplore-ios
+
+Both client repos are usually checked out as siblings of this one
+(`../gpxplore-web`, `../gpxplore-ios`). `gpxplore-web` loads this pipeline's
+compact JSON directly; `gpxplore-ios` bundles a gzipped marker/detail snapshot
+that `pipeline/ios_snapshot.py` builds *in this repo*, directly from the same
+compact `CampRecord[]` output (a Python port of gpxplore-web's now-retired
+`build-ios-campground-snapshot.mjs` - see that module's docstring for the
+ported-behavior list). `make publish-downstream` drives both steps + the copy
+into `gpxplore-ios`, in the right order, with no Node/npm dependency:
+
+```bash
+# just the snapshot, locally, no other repos touched
+make ios-snapshot
+
+# dry run: shows byte-size deltas for every file in both client repos, writes nothing
+make publish-downstream
+
+# actually write into gpxplore-web/apps/planner/public/data and
+# gpxplore-ios/gpxplore/Resources/Campgrounds
+make publish-downstream CONFIRM=1
+
+# one-liner: run the full pipeline, then publish downstream
+make publish-all CONFIRM=1
+```
+
+Override the sibling paths with `WEB_REPO=`/`IOS_REPO=` if your checkouts
+live elsewhere. After a confirmed run, review and open a PR in each of the
+two client repos — this script does not commit or push anything itself.
+
+`ios_snapshot.py`'s `tier_for()` is a manually-kept-in-sync copy of
+`packages/route-components/src/lib/campgroundShared.ts::tierFor` in
+gpxplore-web (the source of truth for tier semantics), same as it was in the
+retired `.mjs` script. If that function's rules change, update this by hand.
+
 ## Stages
 
 | Stage | Command | What it does |
@@ -53,6 +88,8 @@ make publish-confirm TARGET=/path/to/gpx-route-planner/apps/planner/public/data
 | validate | `make validate` | Schema, coordinate-bounds, and exact-duplicate checks (hard, non-zero exit on failure) plus an id-reuse warning and a diff-vs-previous-snapshot report. |
 | compact | `make compact` | Builds `usfs-campgrounds.json`, `blm-campgrounds.json`, and `state-campgrounds.json`, validating each against `schema/camp-record.schema.json`. |
 | publish | `make publish` | Writes the reviewable artifact to `data/publish/<date>/`; `--confirm` copies into an external `TARGET`. |
+| ios-snapshot | `make ios-snapshot` | Builds `gpxplore-ios`'s gzipped `campground-marker-index.json.gz` / `campground-detail.json.gz` from compact output, into `data/ios-snapshot/<date>/`. |
+| publish-downstream | `make publish-downstream` | Publishes into `gpxplore-web`, builds the iOS snapshot, and copies the result into `gpxplore-ios`. `CONFIRM=1` to write; see below. |
 
 Every stage also has a direct CLI form, e.g. `python3 -m pipeline.cli validate --snapshot 2026-07-01`. Run `python3 -m pipeline.cli <stage> -h` for options. Per-source runs are supported where it makes sense: `make normalize SOURCE=mt`.
 
@@ -67,11 +104,12 @@ pipeline/
   fetch/                 # arcgis paginator + manual-file (offline) adapters
   normalize/             # one adapter module per source (usfs, blm, mt, id_, co)
     state_base.py        # shared canonical builder for the state adapters
-  merge.py validate.py compact.py publish.py cli.py
+  merge.py validate.py compact.py publish.py ios_snapshot.py cli.py
   overrides/id_no_camping.json   # hand-curated Idaho day-use deny-list
-tests/                   # unittest suite (adapters, compact golden file, validate, common)
+tests/                   # unittest suite (adapters, compact golden file, validate, common, ios snapshot)
 data/                    # all generated output (gitignored)
 campgrounds-pipeline-bundle/     # original reference material + raw snapshots
+scripts/publish_downstream.sh   # cross-repo orchestration: gpxplore-web + gpxplore-ios
 ```
 
 ## Adding a new source

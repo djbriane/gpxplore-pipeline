@@ -6,12 +6,19 @@ PY ?= python3
 SOURCE ?=
 SNAPSHOT ?=
 TARGET ?=
+CONFIRM ?=
+
+# Sibling repo checkouts that consume this pipeline's output.
+WEB_REPO ?= ../gpxplore-web
+IOS_REPO ?= ../gpxplore-ios
 
 # Optional args passed through to the CLI.
 SOURCE_ARG = $(if $(SOURCE),--source $(SOURCE),)
 SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
+CONFIRM_ARG = $(if $(CONFIRM),--confirm,)
+DOWNSTREAM_SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot=$(SNAPSHOT),)
 
-.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm pipeline blm-verify test clean
+.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm ios-snapshot publish-downstream publish-all pipeline blm-verify test clean
 
 help:
 	@echo "Campgrounds ingestion pipeline"
@@ -24,6 +31,9 @@ help:
 	@echo "  make compact                 Build app-facing CampRecord[] JSON files"
 	@echo "  make publish                 Write reviewable artifact to data/publish/"
 	@echo "  make publish-confirm TARGET=<dir>  Copy compact output into an external dir"
+	@echo "  make ios-snapshot            Build gpxplore-ios's gzipped marker/detail snapshot from compact output"
+	@echo "  make publish-downstream [CONFIRM=1]  Stage into gpxplore-web + build/copy iOS snapshot (dry run by default)"
+	@echo "  make publish-all [CONFIRM=1]  Run pipeline, then publish-downstream"
 	@echo "  make pipeline                Run fetch->normalize->merge->validate->compact"
 	@echo "  make blm-verify              Probe candidate BLM live endpoint vs snapshot"
 	@echo "  make test                    Run the unittest suite"
@@ -53,6 +63,15 @@ publish:
 publish-confirm:
 	$(PY) -m pipeline.cli publish $(SNAPSHOT_ARG) --target $(TARGET) --confirm
 
+ios-snapshot:
+	$(PY) -m pipeline.cli ios-snapshot $(SNAPSHOT_ARG)
+
+publish-downstream:
+	WEB_REPO=$(WEB_REPO) IOS_REPO=$(IOS_REPO) \
+		scripts/publish_downstream.sh $(CONFIRM_ARG) $(DOWNSTREAM_SNAPSHOT_ARG)
+
+publish-all: pipeline publish-downstream
+
 pipeline:
 	$(PY) -m pipeline.cli pipeline
 
@@ -63,4 +82,4 @@ test:
 	$(PY) -m unittest discover -s tests -v
 
 clean:
-	rm -rf data/raw data/processed data/merged data/reports data/compact data/publish
+	rm -rf data/raw data/processed data/merged data/reports data/compact data/publish data/ios-snapshot

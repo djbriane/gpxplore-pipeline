@@ -13,7 +13,7 @@ import argparse
 import csv
 import sys
 
-from . import common, compact, fetch, merge, normalize, publish, validate
+from . import common, compact, fetch, ios_snapshot, merge, normalize, publish, validate
 from .registry import get_source
 
 
@@ -45,6 +45,11 @@ def _cmd_compact(args) -> int:
 def _cmd_publish(args) -> int:
     publish.run(snapshot=args.snapshot, target=args.target, confirm=args.confirm)
     return 0
+
+
+def _cmd_ios_snapshot(args) -> int:
+    summary = ios_snapshot.run(snapshot=args.snapshot)
+    return 1 if summary["over_soft_ceiling"] else 0
 
 
 def _cmd_pipeline(args) -> int:
@@ -165,6 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
     pp.add_argument("--target", help="external target dir (e.g. app public/data)")
     pp.add_argument("--confirm", action="store_true", help="actually write to --target")
     pp.set_defaults(func=_cmd_publish)
+
+    pi = sub.add_parser("ios-snapshot", help="build gpxplore-ios's gzipped marker/detail snapshot")
+    pi.add_argument("--snapshot", help="compact snapshot to build from (default: latest)")
+    pi.set_defaults(func=_cmd_ios_snapshot)
 
     pl = sub.add_parser("pipeline", help="run fetch->normalize->merge->validate->compact")
     pl.add_argument("--live", action="store_true", help="fetch live where confirmed")

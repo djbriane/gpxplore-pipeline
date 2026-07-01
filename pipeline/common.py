@@ -34,6 +34,7 @@ MERGED_DIR = DATA_DIR / "merged"
 REPORTS_DIR = DATA_DIR / "reports"
 COMPACT_DIR = DATA_DIR / "compact"
 PUBLISH_DIR = DATA_DIR / "publish"
+IOS_SNAPSHOT_DIR = DATA_DIR / "ios-snapshot"
 SCHEMA_DIR = REPO_ROOT / "schema"
 
 
