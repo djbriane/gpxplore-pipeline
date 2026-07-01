@@ -172,8 +172,8 @@ trusting live mode.
 
 ## Intentional behavior changes vs. the old scripts
 
-Everything is a like-for-like port of the reference scripts **except** these two
-deliberate fixes (both surfaced in the validate diff / compact summary):
+Everything is a like-for-like port of the reference scripts **except** these
+deliberate fixes (all surfaced in the validate diff / compact summary):
 
 1. **MT/ID campground-vs-campsite.** Montana previously emitted one marker per
    *campsite* (e.g. 45 markers for one campground) and swept in non-camping
@@ -182,7 +182,17 @@ deliberate fixes (both surfaced in the validate diff / compact summary):
    count as capacity), keeps `Backcountry Camp` sites individual, and drops
    infrastructure; Idaho drops trail/parkway/banner rows and applies a curated
    deny-list. Result: MT ~821 → ~102 records, ID 27 → 20.
-2. **USFS water/restroom flags.** The compact stage used to set `w=1`/`rt=1`
+2. **BLM campground-vs-campsite.** Same underlying bug as MT/ID, different
+   shape: BLM's "Campground" row and its individual "Campsite - Developed -
+   ..." rows (e.g. "Site 1".."Site 8") share no linking field, only proximity
+   - so `normalize/blm.py` rolls developed-campsite rows within 2km of an
+   explicit "Campground" row into it (site count -> `c`), and clusters
+   developed-campsite rows with no nearby "Campground" row (BLM has none for
+   some facilities, e.g. boat-in site clusters) with each other within 500m
+   into one synthesized campground per cluster. A true standalone site (no
+   campground and no sibling nearby) is left alone. Result: BLM 2048 → ~720
+   records.
+3. **USFS water/restroom flags.** The compact stage used to set `w=1`/`rt=1`
    whenever the free-text field was non-empty — so "No water is available" was
    shown as *water available*. It now reads the text semantically
    (`common.text_indicates_available`), so ~2,150 false water flags and ~500

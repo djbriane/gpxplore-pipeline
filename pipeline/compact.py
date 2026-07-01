@@ -10,6 +10,12 @@ deliberate changes, both documented in the plan:
   2. A new state-campgrounds.json builder (MT / ID / CO), which the original
      Node script never produced.
 
+BLM's `c` (capacity) is new too: normalize/blm.py rolls individual developed
+campsite points up into their parent campground (see that module's
+_rollup_developed_sites), and the number of rolled-up sites is surfaced here
+as `c` - the original reference script had no rollup and no capacity field
+for BLM at all.
+
 Output records are deduped by `i` per agency file (guaranteeing the CampRecord
 "unique within an agency file" contract) and validated against
 schema/camp-record.schema.json before writing.
@@ -200,6 +206,8 @@ def build_blm(p: dict[str, Any], x: float, y: float) -> dict[str, Any]:
     }
     if RES_CONFIDENCE.get(p.get("reservation_tier")):
         rec["rc"] = RES_CONFIDENCE[p["reservation_tier"]]
+    if p.get("total_capacity"):
+        rec["c"] = p["total_capacity"]
     if p.get("web_link"):
         rec["u"] = p["web_link"]
     if p.get("admin_state"):

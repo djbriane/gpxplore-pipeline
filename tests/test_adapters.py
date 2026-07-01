@@ -6,6 +6,7 @@ import unittest
 from pathlib import Path
 
 from pipeline import common
+from pipeline.normalize import blm as blm_adapter
 from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
@@ -117,6 +118,91 @@ class MtRollupTests(unittest.TestCase):
         self.assertEqual(len(feats), 1)
         self.assertEqual(feats[0]["properties"]["total_capacity"], 2)
         self.assertEqual(feats[0]["properties"]["name"], "West Shore")
+
+
+class BlmRollupTests(unittest.TestCase):
+    FIELDS = ["OBJECTID", "Feature Type", "Feature Subtype", "Feature Name",
+              "Administrative Unit Code", "Administrative State", "DESCRIPTION",
+              "WEB_LINK", "UNIT_NAME", "GlobalID", "Latitude", "Longitude"]
+
+    def _row(self, object_id, subtype, name, lat, lon):
+        return {"OBJECTID": object_id, "Feature Type": "Campsite", "Feature Subtype": subtype,
+                "Feature Name": name, "Administrative Unit Code": "MTB01000",
+                "Administrative State": "MT", "DESCRIPTION": "", "WEB_LINK": "",
+                "UNIT_NAME": "", "GlobalID": f"{{{object_id}}}", "Latitude": str(lat), "Longitude": str(lon)}
+
+    def test_sites_near_explicit_campground_roll_up_and_disappear(self):
+        # Mirrors the real Thibodeau Campground / "Site 1".."Site N" case:
+        # individual developed-campsite rows ~100-200m from an explicit
+        # "Campground" row should fold into it, not show as their own markers.
+        rows = [self._row("1", "Campground", "Thibodeau Campground", 46.9504, -113.6073)]
+        for i, (dlat, dlon) in enumerate([(0.0005, 0.0002), (-0.0003, 0.0004), (0.0002, -0.0003)], start=2):
+            rows.append(self._row(
+                str(i), "Campsite - Developed - Non Reservable - Fee", f"Site {i}",
+                46.9504 + dlat, -113.6073 + dlon,
+            ))
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = blm_adapter.normalize(path, "2026-05-20", "blm_recreation")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1, "1 campground + 3 nearby sites -> one POI")
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Thibodeau Campground")
+        self.assertEqual(p["object_id"], "1")
+        self.assertEqual(p["total_capacity"], 3)
+
+    def test_orphan_site_cluster_synthesizes_one_campground(self):
+        # No "Campground" row at all - mirrors "Patos Island Campsite 1..N":
+        # numbered sites with nothing but proximity linking them.
+        rows = [
+            self._row("10", "Campsite - Developed - Non Reservable - Fee",
+                       "Patos Island Campsite 1", 48.7860, -122.9670),
+            self._row("11", "Campsite - Developed - Non Reservable - Fee",
+                       "Patos Island Campsite 2", 48.7861, -122.9671),
+            self._row("12", "Campsite - Developed - Non Reservable - Fee",
+                       "Patos Island Campsite 3", 48.7862, -122.9669),
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = blm_adapter.normalize(path, "2026-05-20", "blm_recreation")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Patos Island")
+        self.assertEqual(p["total_capacity"], 3)
+        self.assertEqual(p["reservation_tier"], common.TIER_DEFINITE_FCFS)
+
+    def test_true_standalone_site_is_kept_unchanged(self):
+        rows = [self._row("20", "Campsite - Developed - Reservable - Fee", "Lonesome Site", 40.0, -105.0)]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = blm_adapter.normalize(path, "2026-05-20", "blm_recreation")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Lonesome Site")
+        self.assertIsNone(p["total_capacity"])
+
+    def test_distant_site_does_not_attach_to_unrelated_campground(self):
+        rows = [
+            self._row("30", "Campground", "Far Campground", 40.0, -105.0),
+            # ~5.5km away - beyond ANCHOR_ATTACH_KM, and no sibling to cluster with.
+            self._row("31", "Campsite - Developed - Non Reservable - Fee", "Unrelated Site", 40.05, -105.0),
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = blm_adapter.normalize(path, "2026-05-20", "blm_recreation")
+        finally:
+            path.unlink()
+
+        names = {f["properties"]["name"] for f in feats}
+        self.assertEqual(names, {"Far Campground", "Unrelated Site"})
 
 
 class IdFilterTests(unittest.TestCase):
