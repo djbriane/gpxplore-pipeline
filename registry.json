@@ -94,6 +94,66 @@
           "confirmed": true
         }
       }
+    },
+    {
+      "id": "wy",
+      "source_tag": "wy_state_parks",
+      "adapter": "wy",
+      "label": "Wyoming State Parks (Camping points)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/wy_camping.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "5766734037209e084b0f05733727f3066f700bff35fa89406d1c0ab31960ea85",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://gis.deq.wyo.gov/arcgis/rest/services/WYSPHST_pts/MapServer/1/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true,
+          "note": "Camping (ID: 1) layer of WYSPHST_pts. Park-level points (Camping == 'YES'); offline snapshot is a saved copy of the live geojson."
+        }
+      }
+    },
+    {
+      "id": "wa",
+      "source_tag": "wa_state_parks",
+      "adapter": "wa",
+      "label": "Washington State Parks (Campsites)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/wa_campsites.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "762ac5b94e3b695ea1e725f5619cd115ab26dce37bc70c4f32143e239cf28e21",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services5.arcgis.com/4LKAHwqnBooVDUlX/arcgis/rest/services/Campsites/FeatureServer/78/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "PARKS - Campsites (layer 78). Campsite-level points rolled up to one campground per park in the wa adapter; offline snapshot mirrors the live geojson."
+        }
+      }
+    },
+    {
+      "id": "ca",
+      "source_tag": "ca_state_parks",
+      "adapter": "ca",
+      "label": "California State Parks (Campgrounds)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/ca_campgrounds.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "b57730429bc57d3bbc787bbc88cc2a88dfc1f832942f7afb163f318fc50a28d7",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services2.arcgis.com/AhxrK3F6WM8ECvDi/arcgis/rest/services/Campgrounds/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "CSP Campgrounds layer (campground-area granularity). LICENSE: COPYRIGHT California State Parks; portal requests review of allowed uses before commercial use (contact geodata@parks.ca.gov). Confirm licensing before publishing commercially."
+        }
+      }
     }
   ]
 }

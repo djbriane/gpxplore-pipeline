@@ -17,7 +17,7 @@ from typing import Any
 
 from .. import common
 from ..registry import Source, load_registry
-from . import blm, co, id_ as id_adapter, mt, usfs
+from . import blm, ca, co, id_ as id_adapter, mt, usfs, wa, wy
 
 ADAPTERS: dict[str, ModuleType] = {
     "usfs": usfs,
@@ -25,6 +25,9 @@ ADAPTERS: dict[str, ModuleType] = {
     "mt": mt,
     "id": id_adapter,
     "co": co,
+    "wy": wy,
+    "wa": wa,
+    "ca": ca,
 }
 
 
