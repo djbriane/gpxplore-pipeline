@@ -12,8 +12,14 @@ from pipeline.normalize import ca as ca_adapter
 from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
+from pipeline.normalize import az as az_adapter
+from pipeline.normalize import or_ as or_adapter
 from pipeline.normalize import wa as wa_adapter
 from pipeline.normalize import wy as wy_adapter
+
+
+def _polygon(ring, props) -> dict:
+    return {"type": "Feature", "geometry": {"type": "Polygon", "coordinates": [ring]}, "properties": props}
 
 
 def _write_csv(rows, fieldnames) -> Path:
@@ -329,6 +335,59 @@ class CaAdapterTests(unittest.TestCase):
         path = _write_geojson(features)
         try:
             return ca_adapter.normalize(path, "2026-07-01", "ca_state_parks")
+        finally:
+            path.unlink()
+
+
+class OrAdapterTests(unittest.TestCase):
+    def test_camping_units_kept_as_centroids_others_dropped(self):
+        # A unit square ring -> centroid (0.5, 0.5); only USE_TYPE Camping kept.
+        ring = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0], [0.0, 0.0]]
+        feats = self._normalize([
+            _polygon(ring, {"USE_TYPE": "Camping", "FULL_NAME": "Cape Lookout State Park",
+                            "NAME": "Cape Lookout", "DESIGNATION": "State Park",
+                            "OBJECTID": 7, "GlobalID": "{A}"}),
+            _polygon(ring, {"USE_TYPE": "Day Use", "FULL_NAME": "Some Wayside",
+                            "DESIGNATION": "State Wayside", "OBJECTID": 8, "GlobalID": "{B}"}),
+        ])
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Cape Lookout State Park")
+        self.assertEqual(p["state"], "OR")
+        self.assertEqual(p["site_id"], "7")
+        self.assertEqual(feats[0]["geometry"]["coordinates"], [0.5, 0.5])
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return or_adapter.normalize(path, "2026-07-01", "or_state_parks")
+        finally:
+            path.unlink()
+
+
+class AzAdapterTests(unittest.TestCase):
+    def test_nonfederal_campground_kept_federal_and_noncamp_dropped(self):
+        feats = self._normalize([
+            _point(-112.15, 33.80, {"PARKNAME": "Ben Avery", "MANAGENCY": "ARIZONA STATE PARKS & TRAILS",
+                                     "CAMPGROUND": "Y", "FEE": "Y", "OBJECTID": 44,
+                                     "STREET": "4044 W Black Canyon Blvd", "CITY": "PHOENIX", "PARKTYPE": "REGIONAL PARK"}),
+            _point(-111.0, 34.0, {"PARKNAME": "USFS Campground", "MANAGENCY": "FOREST SERVICE",
+                                   "CAMPGROUND": "Y", "FEE": "Y", "OBJECTID": 45}),  # federal -> dropped
+            _point(-111.5, 33.5, {"PARKNAME": "City Day Park", "MANAGENCY": "MARICOPA COUNTY",
+                                   "CAMPGROUND": "N", "FEE": "N", "OBJECTID": 46}),  # no camping -> dropped
+        ])
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Ben Avery")
+        self.assertEqual(p["state"], "AZ")
+        self.assertEqual(p["operated_by"], "ARIZONA STATE PARKS & TRAILS")
+        self.assertTrue(p["fee_charged"])
+        self.assertEqual(p["directions"], "4044 W Black Canyon Blvd, PHOENIX")
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return az_adapter.normalize(path, "2026-07-01", "az_parks")
         finally:
             path.unlink()
 

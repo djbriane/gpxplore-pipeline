@@ -348,6 +348,48 @@ def centroid(coords: Sequence[tuple[float, float]]) -> tuple[float, float]:
     return sx / n, sy / n
 
 
+def _ring_points(ring: Any) -> list[tuple[float, float]]:
+    """Coerce a GeoJSON linear ring to (lon, lat) pairs, dropping the closing dup."""
+    pts: list[tuple[float, float]] = []
+    for c in ring or []:
+        if isinstance(c, (list, tuple)) and len(c) >= 2:
+            lon, lat = c[0], c[1]
+            if isinstance(lon, (int, float)) and isinstance(lat, (int, float)):
+                pts.append((lon, lat))
+    if len(pts) > 1 and pts[0] == pts[-1]:
+        pts = pts[:-1]
+    return pts
+
+
+def geometry_centroid(geom: dict[str, Any] | None) -> tuple[float, float] | None:
+    """Return a representative (lon, lat) for Point / Polygon / MultiPolygon.
+
+    Used by the polygon-only state sources (OR boundaries, etc.) that need a
+    single marker point. Polygons average their outer ring's vertices;
+    MultiPolygons use the outer ring with the most vertices (largest by vertex
+    count is close enough for a marker). Returns None for empty/unknown geometry.
+    """
+    if not geom:
+        return None
+    gtype = geom.get("type")
+    coords = geom.get("coordinates")
+    if gtype == "Point":
+        if isinstance(coords, (list, tuple)) and len(coords) >= 2 \
+                and isinstance(coords[0], (int, float)) and isinstance(coords[1], (int, float)):
+            return coords[0], coords[1]
+        return None
+    if gtype == "Polygon":
+        pts = _ring_points(coords[0]) if coords else []
+        return centroid(pts) if pts else None
+    if gtype == "MultiPolygon":
+        rings = [_ring_points(poly[0]) for poly in (coords or []) if poly]
+        rings = [r for r in rings if r]
+        if not rings:
+            return None
+        return centroid(max(rings, key=len))
+    return None
+
+
 # ---------------------------------------------------------------------------
 # GeoJSON helpers
 # ---------------------------------------------------------------------------

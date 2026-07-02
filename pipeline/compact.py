@@ -292,6 +292,8 @@ STATE_SOURCES = {
     "wy_state_parks",
     "wa_state_parks",
     "ca_state_parks",
+    "or_state_parks",
+    "az_parks",
 }
 
 

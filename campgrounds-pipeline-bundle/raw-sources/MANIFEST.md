@@ -16,6 +16,8 @@ source just to get the pipeline running or tested.
 | `wy_camping.geojson` | Wyoming State Parks Camping points (WYSPHST_pts/MapServer/1) | 6 KB | 2026-07-01 | `5766734037209e084b0f05733727f3066f700bff35fa89406d1c0ab31960ea85` |
 | `wa_campsites.geojson` | Washington State Parks Campsites (Campsites/FeatureServer/78) | 2.3 MB | 2026-07-01 | `762ac5b94e3b695ea1e725f5619cd115ab26dce37bc70c4f32143e239cf28e21` |
 | `ca_campgrounds.geojson` | California State Parks Campgrounds (Campgrounds/FeatureServer/0) — COPYRIGHT CA State Parks, review allowed uses | 228 KB | 2026-07-01 | `b57730429bc57d3bbc787bbc88cc2a88dfc1f832942f7afb163f318fc50a28d7` |
+| `or_state_parks.geojson` | Oregon State Parks boundaries (Oregon_State_Parks/FeatureServer/0) — **simplified geometry** (maxAllowableOffset=0.001; only centroids used) | 284 KB | 2026-07-01 | `0d3be4ee22a68272909aef6a3c46e0f1544496e95035b9d331701f9d5fa634d3` |
+| `az_parks.geojson` | ParksInArizona point locations (ParksInArizona/FeatureServer/0; adapter filters to non-federal campgrounds) | 2.7 MB | 2026-07-01 | `620604574e3fba04b35ed6a46d8dcf867c84c827b716c3a9fb8d490da68d11d5` |
 
 ## Why checksums are recorded here
 
