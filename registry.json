@@ -194,6 +194,26 @@
           "note": "ParksInArizona point layer (all agencies, ~2862 parks). The az adapter keeps CAMPGROUND=='Y' and drops federal agencies (USFS/BLM/NPS/FWS) already covered by the national sources, leaving state/county/tribal/AZ Game&Fish campgrounds."
         }
       }
+    },
+    {
+      "id": "bc",
+      "source_tag": "bc_rec_sites",
+      "adapter": "bc",
+      "label": "BC Recreation Sites and Trails (campgrounds)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/bc_rec_sites.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "935e41b62e847bc2ca3b2d8aae4ab23101d5eb8259264dfa8e458a4ee0e2d848",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/RecSitesReservesInterpForests_DetailsClosures_publicView/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true,
+          "note": "Official RSTBC point layer (2268 pts, all project types). The bc adapter keeps PROJECT_TYPE 'SIT' with DEFINED_CAMPSITES>0 (~1147 campgrounds; DEFINED_CAMPSITES -> capacity). IMPORTANT: server caps at 1000 records/page, so page_size must stay <=1000 or pagination stops after page 1."
+        }
+      }
     }
   ]
 }

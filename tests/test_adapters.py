@@ -13,6 +13,7 @@ from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
 from pipeline.normalize import az as az_adapter
+from pipeline.normalize import bc as bc_adapter
 from pipeline.normalize import or_ as or_adapter
 from pipeline.normalize import wa as wa_adapter
 from pipeline.normalize import wy as wy_adapter
@@ -388,6 +389,34 @@ class AzAdapterTests(unittest.TestCase):
         path = _write_geojson(features)
         try:
             return az_adapter.normalize(path, "2026-07-01", "az_parks")
+        finally:
+            path.unlink()
+
+
+class BcAdapterTests(unittest.TestCase):
+    def test_rec_site_campground_kept_trails_and_zero_campsite_dropped(self):
+        feats = self._normalize([
+            _point(-118.81, 49.52, {"PROJECT_TYPE": "SIT - Recreation Site", "PROJECT_NAME": "State Creek",
+                                     "DEFINED_CAMPSITES": 11, "FTEN_RPD_SYSID": 3518,
+                                     "SITE_DESCRIPTION": "Lakefront sites.", "DRIVING_DIRECTIONS": "Turn south on Dog Creek Rd."}),
+            _point(-120.0, 50.0, {"PROJECT_TYPE": "RTR - Recreation Trail Reserve", "PROJECT_NAME": "Some Trail",
+                                   "DEFINED_CAMPSITES": 0, "FTEN_RPD_SYSID": 99}),  # trail -> dropped
+            _point(-121.0, 51.0, {"PROJECT_TYPE": "SIT - Recreation Site", "PROJECT_NAME": "Day Use Site",
+                                   "DEFINED_CAMPSITES": 0, "FTEN_RPD_SYSID": 100}),  # no campsites -> dropped
+        ])
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "State Creek")
+        self.assertEqual(p["state"], "BC")
+        self.assertEqual(p["site_id"], "3518")
+        self.assertEqual(p["total_capacity"], 11)
+        self.assertEqual(p["operated_by"], "Recreation Sites and Trails BC")
+        self.assertEqual(p["directions"], "Turn south on Dog Creek Rd.")
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return bc_adapter.normalize(path, "2026-07-01", "bc_rec_sites")
         finally:
             path.unlink()
 

@@ -294,6 +294,7 @@ STATE_SOURCES = {
     "ca_state_parks",
     "or_state_parks",
     "az_parks",
+    "bc_rec_sites",
 }
 
 
