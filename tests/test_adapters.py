@@ -1,15 +1,19 @@
 """Adapter tests with small hand-built fixtures -> expected canonical output."""
 
 import csv
+import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from pipeline import common
 from pipeline.normalize import blm as blm_adapter
+from pipeline.normalize import ca as ca_adapter
 from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
+from pipeline.normalize import wa as wa_adapter
+from pipeline.normalize import wy as wy_adapter
 
 
 def _write_csv(rows, fieldnames) -> Path:
@@ -18,6 +22,17 @@ def _write_csv(rows, fieldnames) -> Path:
     writer.writeheader()
     for r in rows:
         writer.writerow(r)
+    tmp.close()
+    return Path(tmp.name)
+
+
+def _point(lon, lat, props) -> dict:
+    return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]}, "properties": props}
+
+
+def _write_geojson(features) -> Path:
+    tmp = tempfile.NamedTemporaryFile("w", suffix=".geojson", delete=False, encoding="utf-8")
+    json.dump({"type": "FeatureCollection", "features": features}, tmp)
     tmp.close()
     return Path(tmp.name)
 
@@ -240,6 +255,82 @@ class IdFilterTests(unittest.TestCase):
         finally:
             path.unlink()
         self.assertEqual(feats, [])
+
+
+class WyAdapterTests(unittest.TestCase):
+    def test_camping_park_kept_noncamping_dropped(self):
+        feats = self._normalize([
+            _point(-108.17, 43.42, {"NAME": "Boysen State Park\r\n", "Site_Type": "State Park",
+                                     "Camping": "YES", "FEATURE": "reservoir", "OBJECTID": 1, "CODE": 56013}),
+            _point(-105.0, 42.0, {"NAME": "Day Use Only", "Site_Type": "State Park",
+                                   "Camping": "NO", "FEATURE": "park", "OBJECTID": 2, "CODE": 56099}),
+        ])
+        self.assertEqual(len(feats), 1)
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Boysen State Park")  # trailing whitespace stripped
+        self.assertEqual(p["state"], "WY")
+        self.assertEqual(p["site_subtype"], "CAMPGROUND")
+        self.assertEqual(p["site_id"], "1")
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return wy_adapter.normalize(path, "2026-07-01", "wy_state_parks")
+        finally:
+            path.unlink()
+
+
+class WaRollupTests(unittest.TestCase):
+    def test_active_campsites_roll_up_to_one_campground_per_park(self):
+        feats = self._normalize([
+            _point(-123.15, 47.36, {"ParkName": "Potlatch", "ParkCode": 42502, "Filter": "active",
+                                     "SourceNotes": "online reservation system map"}),
+            _point(-123.16, 47.37, {"ParkName": "Potlatch", "ParkCode": 42502, "Filter": "active",
+                                     "SourceNotes": "online reservation system map"}),
+            _point(-123.14, 47.35, {"ParkName": "Potlatch", "ParkCode": 42502, "Filter": "inactive",
+                                     "SourceNotes": ""}),  # inactive dropped
+        ])
+        self.assertEqual(len(feats), 1, "2 active + 1 inactive -> one campground POI")
+        p = feats[0]["properties"]
+        self.assertEqual(p["name"], "Potlatch")
+        self.assertEqual(p["state"], "WA")
+        self.assertEqual(p["site_id"], "42502")
+        self.assertEqual(p["total_capacity"], 2)  # only active sites counted
+        self.assertEqual(p["reservation_tier"], common.TIER_RESERVABLE)  # SourceNotes -> reservable
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return wa_adapter.normalize(path, "2026-07-01", "wa_state_parks")
+        finally:
+            path.unlink()
+
+
+class CaAdapterTests(unittest.TestCase):
+    def test_type_drives_development_and_group_subtype(self):
+        feats = self._normalize([
+            _point(-121.7, 38.1, {"Campground": "North Grove Campground", "TYPE": "Developed Family Camp Area",
+                                   "SUBTYPE": "Not Defined", "GISID": "GIS0006400", "GlobalID": "{A}",
+                                   "DETAIL": "North Grove Campground"}),
+            _point(-119.5, 37.5, {"Campground": "Backpack Camp", "TYPE": "Primitive Family Camp Area",
+                                   "SUBTYPE": "Walk-in", "GISID": "GIS0006401", "GlobalID": "{B}",
+                                   "DETAIL": "Backpack Camp"}),
+        ])
+        self.assertEqual(len(feats), 2)
+        developed = feats[0]["properties"]
+        self.assertEqual(developed["name"], "North Grove Campground")
+        self.assertEqual(developed["state"], "CA")
+        self.assertEqual(developed["site_id"], "GIS0006400")
+        self.assertEqual(developed["development_label"], "moderate")  # Developed -> moderate
+        primitive = feats[1]["properties"]
+        self.assertEqual(primitive["development_label"], "minimal")  # Primitive -> minimal
+
+    def _normalize(self, features):
+        path = _write_geojson(features)
+        try:
+            return ca_adapter.normalize(path, "2026-07-01", "ca_state_parks")
+        finally:
+            path.unlink()
 
 
 if __name__ == "__main__":

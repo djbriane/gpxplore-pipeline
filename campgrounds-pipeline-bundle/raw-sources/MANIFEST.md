@@ -13,6 +13,9 @@ source just to get the pipeline running or tested.
 | `FWPLND_STATEPARKS_FACILITIES_PTS_7905798971970118109.csv` | Montana FWP State Parks facilities | 440 KB | 2026-05-20 | `693052ae10ffafdaa05126d93c8defeb1b6aba9fba54460bf7941dc3393aec70` |
 | `IDPR_Parks_and_Facilities.csv` | Idaho Parks & Facilities | 22 KB | 2026-05-20 | `af38748bafc7a85a52340fcf56ac37a7d8dcb2d6d60cf14105b885a0334df446` |
 | `co_campgrounds.geojson` | Colorado campgrounds (via `scripts/download_co_campgrounds.py`) | 193 KB | 2026-05-20 | `cc41bb4d969e08684721e27ae693bc4c31b6f1973a5b984312032cf45d850f6c` |
+| `wy_camping.geojson` | Wyoming State Parks Camping points (WYSPHST_pts/MapServer/1) | 6 KB | 2026-07-01 | `5766734037209e084b0f05733727f3066f700bff35fa89406d1c0ab31960ea85` |
+| `wa_campsites.geojson` | Washington State Parks Campsites (Campsites/FeatureServer/78) | 2.3 MB | 2026-07-01 | `762ac5b94e3b695ea1e725f5619cd115ab26dce37bc70c4f32143e239cf28e21` |
+| `ca_campgrounds.geojson` | California State Parks Campgrounds (Campgrounds/FeatureServer/0) — COPYRIGHT CA State Parks, review allowed uses | 228 KB | 2026-07-01 | `b57730429bc57d3bbc787bbc88cc2a88dfc1f832942f7afb163f318fc50a28d7` |
 
 ## Why checksums are recorded here
 
