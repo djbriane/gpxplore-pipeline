@@ -149,12 +149,17 @@ create_pr() {
 
   cd "$repo"
 
+  # Check if branch has commits ahead of main
+  local commits_ahead=$(git rev-list --count main..$branch 2>/dev/null || echo "0")
+  if [[ "$commits_ahead" == "0" ]]; then
+    echo "  (no commits on $branch, skipping PR for $name)"
+    return
+  fi
+
   # Check if gh CLI is available
   if ! command -v gh &> /dev/null; then
     echo "  WARNING: 'gh' CLI not found, skipping PR creation for $name"
-    echo "  Create PRs manually at:"
-    echo "    Web:  $(git remote get-url origin | sed 's/.git$//')/pull/new/$branch"
-    echo "    iOS:  $(git remote get-url origin | sed 's/.git$//')/pull/new/$branch"
+    echo "  Create PR manually at: $(git remote get-url origin | sed 's/.git$//')/pull/new/$branch"
     return
   fi
 
