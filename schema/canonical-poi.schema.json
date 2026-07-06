@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gpxplore.example/schema/canonical-poi.schema.json",
+  "title": "Canonical Normalized POI Record",
+  "description": "GeoJSON Feature.properties shape produced by POI adapters before merge.",
+  "type": "object",
+  "required": ["source", "site_id", "name", "category", "snapshot_date", "ingest_hash"],
+  "properties": {
+    "source": { "type": "string" },
+    "site_id": { "type": ["string", "null"] },
+    "name": { "type": "string" },
+    "public_name": { "type": ["string", "null"] },
+    "category": {
+      "type": "string",
+      "enum": ["historic", "interpretive", "viewpoint", "lookout", "mine", "ghost_town", "landmark", "hot_spring"]
+    },
+    "subtype_raw": { "type": ["string", "null"] },
+    "state": { "type": ["string", "null"] },
+    "county": { "type": ["string", "null"] },
+    "elevation_ft": { "type": ["string", "null"] },
+    "significant_year": { "type": ["string", "null"] },
+    "ref_number": { "type": ["string", "null"] },
+    "commodity": { "type": ["string", "null"] },
+    "dev_status": { "type": ["string", "null"] },
+    "description": { "type": ["string", "null"] },
+    "operated_by": { "type": ["string", "null"] },
+    "url": { "type": ["string", "null"], "format": "uri" },
+    "snapshot_date": { "type": "string", "format": "date" },
+    "ingest_hash": { "type": "string" }
+  },
+  "additionalProperties": false
+}

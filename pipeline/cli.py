@@ -14,7 +14,7 @@ import argparse
 import csv
 import sys
 
-from . import check_updates, common, compact, fetch, ios_snapshot, merge, normalize, publish, validate
+from . import check_updates, common, compact, fetch, ios_poi_snapshot, ios_snapshot, merge, normalize, publish, validate
 from .registry import get_source
 
 
@@ -50,6 +50,11 @@ def _cmd_publish(args) -> int:
 
 def _cmd_ios_snapshot(args) -> int:
     summary = ios_snapshot.run(snapshot=args.snapshot)
+    return 1 if summary["over_soft_ceiling"] else 0
+
+
+def _cmd_ios_poi_snapshot(args) -> int:
+    summary = ios_poi_snapshot.run(snapshot=args.snapshot)
     return 1 if summary["over_soft_ceiling"] else 0
 
 
@@ -180,6 +185,10 @@ def build_parser() -> argparse.ArgumentParser:
     pi = sub.add_parser("ios-snapshot", help="build gpxplore-ios's gzipped marker/detail snapshot")
     pi.add_argument("--snapshot", help="compact snapshot to build from (default: latest)")
     pi.set_defaults(func=_cmd_ios_snapshot)
+
+    ppios = sub.add_parser("ios-poi-snapshot", help="build gpxplore-ios's gzipped POI marker/detail snapshot")
+    ppios.add_argument("--snapshot", help="compact snapshot to build from (default: latest)")
+    ppios.set_defaults(func=_cmd_ios_poi_snapshot)
 
     pl = sub.add_parser("pipeline", help="run fetch->normalize->merge->validate->compact")
     pl.add_argument("--live", action="store_true", help="fetch live where confirmed")

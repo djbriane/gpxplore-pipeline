@@ -17,7 +17,7 @@ from typing import Any
 
 from .. import common
 from ..registry import Source, load_registry
-from . import az, bc, blm, ca, co, id_ as id_adapter, mt, or_ as or_adapter, usfs, wa, wy
+from . import az, bc, blm, ca, co, id_ as id_adapter, mt, or_ as or_adapter, usfs, usfs_poi, wa, wy
 
 ADAPTERS: dict[str, ModuleType] = {
     "usfs": usfs,
@@ -31,6 +31,7 @@ ADAPTERS: dict[str, ModuleType] = {
     "or": or_adapter,
     "az": az,
     "bc": bc,
+    "usfs_poi": usfs_poi,
 }
 
 
@@ -81,9 +82,9 @@ def _stats(features: list[dict], src: Source, snapshot: str, raw_path: Path) -> 
     by_tier: dict[str, int] = {}
     for feat in features:
         p = feat["properties"]
-        st = p.get("site_subtype") or p.get("feature_subtype") or "?"
+        st = p.get("site_subtype") or p.get("feature_subtype") or p.get("subtype_raw") or "?"
         by_subtype[st] = by_subtype.get(st, 0) + 1
-        tier = p.get("reservation_tier") or "unknown"
+        tier = p.get("reservation_tier") or p.get("category") or "unknown"
         by_tier[tier] = by_tier.get(tier, 0) + 1
     return {
         "source": src.source_tag,

@@ -12,6 +12,7 @@ from pipeline.normalize import ca as ca_adapter
 from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
+from pipeline.normalize import usfs_poi as usfs_poi_adapter
 from pipeline.normalize import az as az_adapter
 from pipeline.normalize import bc as bc_adapter
 from pipeline.normalize import or_ as or_adapter
@@ -90,6 +91,63 @@ class UsfsAdapterTests(unittest.TestCase):
         # deferred to the compact stage).
         self.assertEqual(p["water_availability"], "No water is available")
         self.assertEqual(feats[0]["geometry"]["coordinates"], [-112.61944, 47.07833])
+
+
+class UsfsPoiAdapterTests(unittest.TestCase):
+    FIELDS = [
+        "latitude", "longitude", "site_id", "objectid", "site_name", "public_site_name",
+        "site_subtype", "address_state", "states_spanned", "maximum_elevation",
+        "minimum_elevation", "recarea_description", "operated_by", "usda_portal_url",
+        "rec1stop_url", "official_designation", "alias_name", "alternative_name",
+        "recarea_name",
+    ]
+
+    def test_lookout_and_historic_rows_normalize_guard_station_dropped(self):
+        rows = [
+            {
+                "latitude": "48.7000", "longitude": "-114.8500", "site_id": "LO1",
+                "objectid": "1", "site_name": "STAHL PEAK LOOKOUT",
+                "public_site_name": "", "site_subtype": "Lookout/Cabin", "address_state": "MT",
+                "states_spanned": "", "maximum_elevation": "7300", "minimum_elevation": "",
+                "recarea_description": "A fire lookout with wide views.", "operated_by": "USFS",
+                "usda_portal_url": "https://www.fs.usda.gov/recarea/test", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "31.8500", "longitude": "-109.3500", "site_id": "H1",
+                "objectid": "2", "site_name": "CAMP RUCKER HISTORIC SITE",
+                "public_site_name": "Camp Rucker Historic Site", "site_subtype": "Interpretive Site",
+                "address_state": "AZ", "states_spanned": "", "maximum_elevation": "",
+                "minimum_elevation": "", "recarea_description": "Historic cavalry camp.",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "47.0", "longitude": "-113.0", "site_id": "CABIN1",
+                "objectid": "3", "site_name": "SOME GUARD STATION",
+                "public_site_name": "", "site_subtype": "Lookout/Cabin", "address_state": "MT",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "SOME GUARD STATION (Lookout/Cabin)",
+                "operated_by": "", "usda_portal_url": "",
+                "rec1stop_url": "", "official_designation": "", "alias_name": "",
+                "alternative_name": "", "recarea_name": "",
+            },
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = usfs_poi_adapter.normalize(path, "2026-05-20", "usfs_infra_poi")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 2)
+        by_id = {f["properties"]["site_id"]: f["properties"] for f in feats}
+        self.assertEqual(by_id["LO1"]["category"], "lookout")
+        self.assertEqual(by_id["LO1"]["state"], "MT")
+        self.assertEqual(by_id["LO1"]["subtype_raw"], "LOOKOUT/CABIN")
+        self.assertEqual(by_id["H1"]["category"], "historic")
+        self.assertEqual(by_id["H1"]["state"], "AZ")
 
 
 class MtRollupTests(unittest.TestCase):

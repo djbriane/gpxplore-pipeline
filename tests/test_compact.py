@@ -56,6 +56,42 @@ class CampUnitDropTests(unittest.TestCase):
         self.assertEqual(counters["dropped_camp_units"], 1)
 
 
+class PoiRecordTests(unittest.TestCase):
+    def test_usfs_poi_compacts_to_short_key_contract(self):
+        feat = {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-114.85, 48.7]},
+            "properties": {
+                "source": "usfs_infra_poi",
+                "site_id": "LO1",
+                "name": "STAHL PEAK LOOKOUT",
+                "public_name": "STAHL PEAK LOOKOUT",
+                "category": "lookout",
+                "subtype_raw": "LOOKOUT/CABIN",
+                "state": "MT",
+                "description": "A fire lookout.",
+                "operated_by": "USFS",
+                "url": "https://www.fs.usda.gov/recarea/test",
+            },
+        }
+        result = compact.compact_features([feat])
+        records = result["files"]["usfs-pois.json"]
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0], {
+            "i": "LO1",
+            "n": "Stahl Peak Lookout",
+            "t": "lookout",
+            "y": 48.7,
+            "x": -114.85,
+            "src": "usfs_infra",
+            "sub": "LOOKOUT/CABIN",
+            "u": "https://www.fs.usda.gov/recarea/test",
+            "st": "MT",
+            "desc": "A fire lookout.",
+            "op": "USFS",
+        })
+
+
 class GoldenFileTests(unittest.TestCase):
     """samples/normalized-sample.geojson -> samples/camp-record-sample.json.
 

@@ -21,6 +21,23 @@
       }
     },
     {
+      "id": "usfs_poi",
+      "source_tag": "usfs_infra_poi",
+      "adapter": "usfs_poi",
+      "label": "USFS National Recreation Sites (INFRA POIs)",
+      "fetch": {
+        "type": "manual_file",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/Recreation_Sites_INFRA.csv",
+        "offline_format": "csv",
+        "offline_sha256": "cdbdc4117d854d97fd0a2d2bd9fef8bbf0c99f8cfe5bb752a6f32dcbd8d5fa0d",
+        "offline_snapshot_date": "2026-05-20",
+        "live": {
+          "confirmed": false,
+          "note": "Phase 1 POI layer re-filters the existing USFS INFRA raw snapshot. Refresh the base usfs source snapshot, then rerun this adapter against the same file."
+        }
+      }
+    },
+    {
       "id": "blm",
       "source_tag": "blm_recreation",
       "adapter": "blm",

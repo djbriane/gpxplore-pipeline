@@ -58,6 +58,9 @@ into `gpxplore-ios`, in the right order, with no Node/npm dependency:
 # just the snapshot, locally, no other repos touched
 make ios-snapshot
 
+# build the POI marker/detail snapshot, locally
+make ios-poi-snapshot
+
 # dry run: shows byte-size deltas for every file in both client repos, writes nothing
 make publish-downstream
 
@@ -86,9 +89,10 @@ retired `.mjs` script. If that function's rules change, update this by hand.
 | normalize | `make normalize` | Runs each source's adapter → canonical GeoJSON in `data/processed/<id>/`. |
 | merge | `make merge` | Concatenates all sources into one dated snapshot `data/merged/<date>/merged.geojson`. |
 | validate | `make validate` | Schema, coordinate-bounds, and exact-duplicate checks (hard, non-zero exit on failure) plus an id-reuse warning and a diff-vs-previous-snapshot report. |
-| compact | `make compact` | Builds `usfs-campgrounds.json`, `blm-campgrounds.json`, and `state-campgrounds.json`, validating each against `schema/camp-record.schema.json`. |
+| compact | `make compact` | Builds campground `CampRecord[]` files plus `usfs-pois.json`, validating them against the camp and POI compact schemas. |
 | publish | `make publish` | Writes the reviewable artifact to `data/publish/<date>/`; `--confirm` copies into an external `TARGET`. |
 | ios-snapshot | `make ios-snapshot` | Builds `gpxplore-ios`'s gzipped `campground-marker-index.json.gz` / `campground-detail.json.gz` from compact output, into `data/ios-snapshot/<date>/`. |
+| ios-poi-snapshot | `make ios-poi-snapshot` | Builds gzipped `poi-marker-index.json.gz` / `poi-detail.json.gz` from compact POI output, into `data/ios-snapshot/<date>/`. |
 | publish-downstream | `make publish-downstream` | Publishes into `gpxplore-web`, builds the iOS snapshot, and copies the result into `gpxplore-ios`. `CONFIRM=1` to write; see below. |
 | check-updates | `make check-updates` | Read-only: checks each source's live record count (network, no fetch/write) against the pinned offline snapshot and flags likely upstream changes. See below. |
 
@@ -103,7 +107,7 @@ pipeline/
   common.py              # shared helpers: hashing, reprojection, classifiers, schema validator, rollup
   registry.py            # loads/validates registry.json
   fetch/                 # arcgis paginator + manual-file (offline) adapters
-  normalize/             # one adapter module per source (usfs, blm, mt, id_, co)
+  normalize/             # one adapter module per source (usfs, usfs_poi, blm, mt, id_, co)
     state_base.py        # shared canonical builder for the state adapters
   merge.py validate.py compact.py publish.py ios_snapshot.py check_updates.py cli.py
   overrides/id_no_camping.json   # hand-curated Idaho day-use deny-list
@@ -157,6 +161,18 @@ scripts/publish_downstream.sh   # cross-repo orchestration: gpxplore-web + gpxpl
 
 That's it — `merge`, `validate`, `compact`, and `publish` pick the new source up
 automatically from the registry.
+
+## POI layers
+
+The first rider POI layer is `usfs_poi` / `usfs_infra_poi`, a conservative
+re-filter of the same USFS INFRA raw snapshot used by the campground adapter.
+It emits `data/compact/<date>/usfs-pois.json` with compact `POIRecord[]`
+records validated by `schema/poi-record.schema.json`; the normalized shape is
+validated by `schema/canonical-poi.schema.json`.
+
+Current Phase 1 categories are `historic`, `interpretive`, `viewpoint`, and
+`lookout`. `LOOKOUT/CABIN` is intentionally filtered by name/designation so
+ordinary guard stations and cabins are not published as fire lookouts.
 
 ## Live fetch
 

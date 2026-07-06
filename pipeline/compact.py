@@ -297,6 +297,11 @@ STATE_SOURCES = {
     "bc_rec_sites",
 }
 
+POI_SOURCE_FILE = "usfs-pois.json"
+POI_SOURCE_TAGS = {
+    "usfs_infra_poi": "usfs_infra",
+}
+
 
 def _dedupe_by_id(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
     """Keep first record per `i` (guarantees per-file id uniqueness)."""
@@ -313,6 +318,38 @@ def _dedupe_by_id(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], 
     return out, collisions
 
 
+def build_poi(p: dict[str, Any], x: float, y: float) -> dict[str, Any]:
+    rec: dict[str, Any] = {
+        "i": p.get("site_id"),
+        "n": clean_name(p.get("public_name") or p.get("name")),
+        "t": p.get("category"),
+        "y": y,
+        "x": x,
+        "src": POI_SOURCE_TAGS.get(p.get("source"), p.get("source")),
+    }
+    if p.get("subtype_raw"):
+        rec["sub"] = p["subtype_raw"]
+    if p.get("url"):
+        rec["u"] = p["url"]
+    if p.get("elevation_ft") and p["elevation_ft"] != "feet":
+        rec["el"] = p["elevation_ft"]
+    if p.get("state"):
+        rec["st"] = p["state"]
+    if p.get("significant_year"):
+        rec["yr"] = p["significant_year"]
+    if p.get("ref_number"):
+        rec["ref"] = p["ref_number"]
+    if p.get("commodity"):
+        rec["com"] = p["commodity"]
+    desc = trim(p.get("description"), 1400)
+    if desc:
+        rec["desc"] = desc
+    op = trim(p.get("operated_by"), 100)
+    if op:
+        rec["op"] = op
+    return rec
+
+
 def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
     counters = {
         "dropped_camp_units": 0,
@@ -324,6 +361,7 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
     usfs: list[dict[str, Any]] = []
     blm: list[dict[str, Any]] = []
     state: list[dict[str, Any]] = []
+    pois: list[dict[str, Any]] = []
 
     for feat in features:
         p = feat.get("properties", {})
@@ -342,10 +380,13 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
             blm.append(build_blm(p, x, y))
         elif source in STATE_SOURCES:
             state.append(build_state(p, x, y))
+        elif source in POI_SOURCE_TAGS:
+            pois.append(build_poi(p, x, y))
 
     usfs, usfs_dupes = _dedupe_by_id(usfs)
     blm, blm_dupes = _dedupe_by_id(blm)
     state, state_dupes = _dedupe_by_id(state)
+    pois, poi_dupes = _dedupe_by_id(pois)
 
     # Amenity-flag stats computed on the final (deduped) USFS file. w_d/rt_d are
     # present whenever the raw field had any text (== the old truthy behavior),
@@ -360,9 +401,10 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
             "usfs-campgrounds.json": usfs,
             "blm-campgrounds.json": blm,
             "state-campgrounds.json": state,
+            POI_SOURCE_FILE: pois,
         },
         "counters": counters,
-        "id_collisions": {"usfs": usfs_dupes, "blm": blm_dupes, "state": state_dupes},
+        "id_collisions": {"usfs": usfs_dupes, "blm": blm_dupes, "state": state_dupes, "poi": poi_dupes},
     }
 
 
@@ -391,13 +433,15 @@ def run(*, snapshot: str | None = None, merged_dir: Path | None = None,
     result = compact_features(features)
 
     # Validate every output record against the frozen app-facing schema.
-    schema = common.load_schema("camp-record.schema.json")
+    camp_schema = common.load_schema("camp-record.schema.json")
+    poi_schema = common.load_schema("poi-record.schema.json")
     all_errors: list[str] = []
     for fname, records in result["files"].items():
+        schema = poi_schema if fname == POI_SOURCE_FILE else camp_schema
         all_errors.extend(_validate_records(records, schema, fname))
     if all_errors:
         preview = "\n".join(all_errors[:20])
-        raise ValueError(f"compact output failed camp-record schema validation:\n{preview}")
+        raise ValueError(f"compact output failed schema validation:\n{preview}")
 
     out_dir = compact_dir / snapshot
     for fname, records in result["files"].items():
