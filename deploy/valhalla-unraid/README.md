@@ -195,6 +195,54 @@ container against old-version tiles.
 
 ---
 
+## 6a. SSH access & key-only hardening
+
+Admin is done as `root` over SSH from a dev box (there's no useful non-root path on Unraid — webGUI
+"users" are SMB-only, and any account that can reach the Docker socket is root-equivalent anyway, so a
+non-root docker admin buys almost nothing for real setup cost).
+
+**Key install (Unraid 7.x).** Root's home is in RAM, so authorized keys must live on the flash. The 7.x
+webGUI (**Users → root → SSH authorized keys**) writes them to `/boot/config/ssh/root/authorized_keys`;
+`/root/.ssh` is a **symlink** to `/boot/config/ssh/root`, so the flash copy *is* the live copy (no
+boot-time sync). (The old single-file `/boot/config/ssh/root.pubkeys` is gone in 7.x — it's a `root/`
+**directory** now.) The dev box uses a dedicated key
+(`~/.ssh/id_ed25519_nuc`) and a `nuc` alias in `~/.ssh/config` so it's independently revocable.
+
+**Key-only hardening (persistent).** `sshd_config` is regenerated in RAM every boot (it only sets
+`PermitRootLogin yes`; password auth is the compiled default), so a one-time edit reverts on reboot.
+Persist it via a flash drop-in re-applied from `/boot/config/go`:
+
+- Flash drop-in `/boot/config/ssh/sshd_config.d/99-hardening.conf`:
+  ```
+  PasswordAuthentication no
+  KbdInteractiveAuthentication no
+  PermitRootLogin prohibit-password
+  ```
+- `/boot/config/go` re-applies it each boot: copy the drop-in into `/etc/ssh/sshd_config.d/`, prepend
+  an `Include /etc/ssh/sshd_config.d/*.conf` to the top of `sshd_config` (sshd takes the **first**
+  value for a keyword, so the Include must precede the stock `PermitRootLogin yes`), then `sshd -t`
+  and reload sshd. Applying it live (same steps by hand) takes effect without a reboot.
+- Optional source scoping: prefix the `authorized_keys` line with
+  `from="192.168.7.0/24,100.64.0.0/10"` (LAN + Tailscale CGNAT) so a leaked key can't be used from the
+  open internet while keeping the Tailscale path working.
+
+### Recovery — if the dev box (and its key) are lost
+
+Disabling SSH password auth does **not** lock you out: the webGUI and local console authenticate with
+the **root password**, a separate path from SSH keys. In order of convenience:
+
+1. **webGUI** `http://zoopnuc.local` (or `http://192.168.7.129`) with the root password → Users → root →
+   paste a new SSH public key. Back in within a minute.
+2. **Local console** (monitor + keyboard) → root shell with the root password.
+3. **Tailscale** (`100.117.203.127`) → off-LAN path to the webGUI / SSH even if you're not on the LAN.
+4. **USB flash** physically holds `/boot/config/ssh/root/authorized_keys`; keep an Unraid **Tools →
+   Flash Backup** so the whole config is restorable if the stick dies.
+
+> The **root password is the master recovery credential** — keep it in a password manager. Everything
+> above depends on it, and none of it depends on any SSH key surviving.
+
+---
+
 ## 7. Exposure — Cloudflare Tunnel (planned)
 
 Run `cloudflared` (Unraid container) with a tunnel routing a hostname → `http://<nuc-ip>:8002`.
