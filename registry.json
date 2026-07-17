@@ -94,6 +94,126 @@
           "confirmed": true
         }
       }
+    },
+    {
+      "id": "wy",
+      "source_tag": "wy_state_parks",
+      "adapter": "wy",
+      "label": "Wyoming State Parks (Camping points)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/wy_camping.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "5766734037209e084b0f05733727f3066f700bff35fa89406d1c0ab31960ea85",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://gis.deq.wyo.gov/arcgis/rest/services/WYSPHST_pts/MapServer/1/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true,
+          "note": "Camping (ID: 1) layer of WYSPHST_pts. Park-level points (Camping == 'YES'); offline snapshot is a saved copy of the live geojson."
+        }
+      }
+    },
+    {
+      "id": "wa",
+      "source_tag": "wa_state_parks",
+      "adapter": "wa",
+      "label": "Washington State Parks (Campsites)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/wa_campsites.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "762ac5b94e3b695ea1e725f5619cd115ab26dce37bc70c4f32143e239cf28e21",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services5.arcgis.com/4LKAHwqnBooVDUlX/arcgis/rest/services/Campsites/FeatureServer/78/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "PARKS - Campsites (layer 78). Campsite-level points rolled up to one campground per park in the wa adapter; offline snapshot mirrors the live geojson."
+        }
+      }
+    },
+    {
+      "id": "ca",
+      "source_tag": "ca_state_parks",
+      "adapter": "ca",
+      "label": "California State Parks (Campgrounds)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/ca_campgrounds.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "b57730429bc57d3bbc787bbc88cc2a88dfc1f832942f7afb163f318fc50a28d7",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services2.arcgis.com/AhxrK3F6WM8ECvDi/arcgis/rest/services/Campgrounds/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "CSP Campgrounds layer (campground-area granularity). LICENSE: COPYRIGHT California State Parks; portal requests review of allowed uses before commercial use (contact geodata@parks.ca.gov). Confirm licensing before publishing commercially."
+        }
+      }
+    },
+    {
+      "id": "or",
+      "source_tag": "or_state_parks",
+      "adapter": "or",
+      "label": "Oregon State Parks (camping units)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/or_state_parks.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "0d3be4ee22a68272909aef6a3c46e0f1544496e95035b9d331701f9d5fa634d3",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://maps.prd.state.or.us/arcgis/rest/services/Land_ownership/Oregon_State_Parks/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "Boundary polygons of all 422 OR state park units; the or adapter keeps USE_TYPE=='Camping' (64) and emits polygon centroids. Offline snapshot uses simplified geometry (maxAllowableOffset=0.001) since only centroids are used; live fetch returns full-resolution polygons (same 422 count)."
+        }
+      }
+    },
+    {
+      "id": "az",
+      "source_tag": "az_parks",
+      "adapter": "az",
+      "label": "Arizona parks with camping (non-federal)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/az_parks.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "620604574e3fba04b35ed6a46d8dcf867c84c827b716c3a9fb8d490da68d11d5",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services2.arcgis.com/gdcQ6sUWKP8qwBmV/arcgis/rest/services/ParksInArizona/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "confirmed": true,
+          "note": "ParksInArizona point layer (all agencies, ~2862 parks). The az adapter keeps CAMPGROUND=='Y' and drops federal agencies (USFS/BLM/NPS/FWS) already covered by the national sources, leaving state/county/tribal/AZ Game&Fish campgrounds."
+        }
+      }
+    },
+    {
+      "id": "bc",
+      "source_tag": "bc_rec_sites",
+      "adapter": "bc",
+      "label": "BC Recreation Sites and Trails (campgrounds)",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/bc_rec_sites.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "935e41b62e847bc2ca3b2d8aae4ab23101d5eb8259264dfa8e458a4ee0e2d848",
+        "offline_snapshot_date": "2026-07-01",
+        "live": {
+          "url": "https://services6.arcgis.com/ubm4tcTYICKBpist/arcgis/rest/services/RecSitesReservesInterpForests_DetailsClosures_publicView/FeatureServer/0/query",
+          "format": "geojson",
+          "page_size": 1000,
+          "confirmed": true,
+          "note": "Official RSTBC point layer (2268 pts, all project types). The bc adapter keeps PROJECT_TYPE 'SIT' with DEFINED_CAMPSITES>0 (~1147 campgrounds; DEFINED_CAMPSITES -> capacity). IMPORTANT: server caps at 1000 records/page, so page_size must stay <=1000 or pagination stops after page 1."
+        }
+      }
     }
   ]
 }

@@ -130,5 +130,31 @@ class RollupSitesTests(unittest.TestCase):
         self.assertEqual(groups[0].site_count, 2)
 
 
+class GeometryCentroidTests(unittest.TestCase):
+    def test_point_returned_as_is(self):
+        self.assertEqual(
+            common.geometry_centroid({"type": "Point", "coordinates": [-120.5, 45.0]}),
+            (-120.5, 45.0),
+        )
+
+    def test_polygon_averages_outer_ring_dropping_closing_dup(self):
+        ring = [[0.0, 0.0], [2.0, 0.0], [2.0, 2.0], [0.0, 2.0], [0.0, 0.0]]
+        self.assertEqual(
+            common.geometry_centroid({"type": "Polygon", "coordinates": [ring]}),
+            (1.0, 1.0),
+        )
+
+    def test_multipolygon_uses_largest_ring(self):
+        small = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.0, 0.0]]
+        big = [[10.0, 10.0], [12.0, 10.0], [12.0, 12.0], [10.0, 12.0], [10.0, 10.0]]
+        geom = {"type": "MultiPolygon", "coordinates": [[small], [big]]}
+        self.assertEqual(common.geometry_centroid(geom), (11.0, 11.0))
+
+    def test_none_and_unknown_return_none(self):
+        self.assertIsNone(common.geometry_centroid(None))
+        self.assertIsNone(common.geometry_centroid({"type": "LineString", "coordinates": []}))
+        self.assertIsNone(common.geometry_centroid({"type": "Point", "coordinates": []}))
+
+
 if __name__ == "__main__":
     unittest.main()

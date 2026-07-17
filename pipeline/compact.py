@@ -285,7 +285,17 @@ def build_state(p: dict[str, Any], x: float, y: float) -> dict[str, Any]:
 # Orchestration
 # ---------------------------------------------------------------------------
 
-STATE_SOURCES = {"mt_state_parks", "id_state_parks", "co_state_parks"}
+STATE_SOURCES = {
+    "mt_state_parks",
+    "id_state_parks",
+    "co_state_parks",
+    "wy_state_parks",
+    "wa_state_parks",
+    "ca_state_parks",
+    "or_state_parks",
+    "az_parks",
+    "bc_rec_sites",
+}
 
 
 def _dedupe_by_id(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
