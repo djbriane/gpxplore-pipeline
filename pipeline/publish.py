@@ -25,6 +25,7 @@ PUBLISH_FILES = (
     "blm-campgrounds.json",
     "state-campgrounds.json",
     "usfs-pois.json",
+    "nrhp-pois.json",
 )
 
 

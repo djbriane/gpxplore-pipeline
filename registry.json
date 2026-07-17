@@ -38,6 +38,27 @@
       }
     },
     {
+      "id": "nrhp",
+      "source_tag": "nrhp",
+      "adapter": "nrhp",
+      "label": "NPS National Register of Historic Places",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/nrhp_locations.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "6e62b7a9708e3175a235ef4c933d058fa2bc46d9db484012fec24f0536da111a",
+        "offline_snapshot_date": "2026-07-06",
+        "live": {
+          "url": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "where": "State IN ('ARIZONA','CALIFORNIA','COLORADO','IDAHO','MONTANA','OREGON','WASHINGTON','WYOMING')",
+          "confirmed": true,
+          "note": "Public NRHP point layer (properties under 10 acres). Larger districts are polygon-only on layer 1 — not included in v1. State values are full names in the GIS; the adapter maps to two-letter codes and filters to the campground footprint."
+        }
+      }
+    },
+    {
       "id": "blm",
       "source_tag": "blm_recreation",
       "adapter": "blm",

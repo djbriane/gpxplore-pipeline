@@ -297,10 +297,12 @@ STATE_SOURCES = {
     "bc_rec_sites",
 }
 
-POI_SOURCE_FILE = "usfs-pois.json"
-POI_SOURCE_TAGS = {
-    "usfs_infra_poi": "usfs_infra",
+POI_OUTPUT: dict[str, tuple[str, str]] = {
+    "usfs_infra_poi": ("usfs-pois.json", "usfs_infra"),
+    "nrhp": ("nrhp-pois.json", "nrhp"),
 }
+POI_SOURCE_TAGS = {source: tag for source, (_fname, tag) in POI_OUTPUT.items()}
+POI_FILENAMES = {fname for fname, _tag in POI_OUTPUT.values()}
 
 
 def _dedupe_by_id(records: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], int]:
@@ -361,7 +363,7 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
     usfs: list[dict[str, Any]] = []
     blm: list[dict[str, Any]] = []
     state: list[dict[str, Any]] = []
-    pois: list[dict[str, Any]] = []
+    poi_files: dict[str, list[dict[str, Any]]] = {fname: [] for fname in POI_FILENAMES}
 
     for feat in features:
         p = feat.get("properties", {})
@@ -381,12 +383,15 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
         elif source in STATE_SOURCES:
             state.append(build_state(p, x, y))
         elif source in POI_SOURCE_TAGS:
-            pois.append(build_poi(p, x, y))
+            fname = POI_OUTPUT[source][0]
+            poi_files[fname].append(build_poi(p, x, y))
 
     usfs, usfs_dupes = _dedupe_by_id(usfs)
     blm, blm_dupes = _dedupe_by_id(blm)
     state, state_dupes = _dedupe_by_id(state)
-    pois, poi_dupes = _dedupe_by_id(pois)
+    poi_dupes: dict[str, int] = {}
+    for fname in POI_FILENAMES:
+        poi_files[fname], poi_dupes[fname] = _dedupe_by_id(poi_files[fname])
 
     # Amenity-flag stats computed on the final (deduped) USFS file. w_d/rt_d are
     # present whenever the raw field had any text (== the old truthy behavior),
@@ -396,15 +401,22 @@ def compact_features(features: list[dict[str, Any]]) -> dict[str, Any]:
     counters["restroom_present"] = sum(1 for r in usfs if "rt_d" in r)
     counters["restroom_flagged"] = sum(1 for r in usfs if r.get("rt") == 1)
 
+    files = {
+        "usfs-campgrounds.json": usfs,
+        "blm-campgrounds.json": blm,
+        "state-campgrounds.json": state,
+    }
+    files.update(poi_files)
+
     return {
-        "files": {
-            "usfs-campgrounds.json": usfs,
-            "blm-campgrounds.json": blm,
-            "state-campgrounds.json": state,
-            POI_SOURCE_FILE: pois,
-        },
+        "files": files,
         "counters": counters,
-        "id_collisions": {"usfs": usfs_dupes, "blm": blm_dupes, "state": state_dupes, "poi": poi_dupes},
+        "id_collisions": {
+            "usfs": usfs_dupes,
+            "blm": blm_dupes,
+            "state": state_dupes,
+            **{f"poi:{fname}": poi_dupes[fname] for fname in POI_FILENAMES},
+        },
     }
 
 
@@ -437,7 +449,7 @@ def run(*, snapshot: str | None = None, merged_dir: Path | None = None,
     poi_schema = common.load_schema("poi-record.schema.json")
     all_errors: list[str] = []
     for fname, records in result["files"].items():
-        schema = poi_schema if fname == POI_SOURCE_FILE else camp_schema
+        schema = poi_schema if fname in POI_FILENAMES else camp_schema
         all_errors.extend(_validate_records(records, schema, fname))
     if all_errors:
         preview = "\n".join(all_errors[:20])

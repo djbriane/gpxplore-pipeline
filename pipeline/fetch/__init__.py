@@ -38,7 +38,8 @@ def _fetch_live(src: Source, raw_dir: Path) -> dict[str, Any]:
     live = src.live
     url = live["url"]
     page_size = int(live.get("page_size", 1000))
-    fc = arcgis.fetch_to_geojson(url, page_size=page_size)
+    where = live.get("where", "1=1")
+    fc = arcgis.fetch_to_geojson(url, page_size=page_size, where=where)
 
     dest_dir = raw_dir / src.id
     dest_dir.mkdir(parents=True, exist_ok=True)

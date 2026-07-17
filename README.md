@@ -170,9 +170,13 @@ It emits `data/compact/<date>/usfs-pois.json` with compact `POIRecord[]`
 records validated by `schema/poi-record.schema.json`; the normalized shape is
 validated by `schema/canonical-poi.schema.json`.
 
-Current Phase 1 categories are `historic`, `interpretive`, `viewpoint`, and
-`lookout`. `LOOKOUT/CABIN` is intentionally filtered by name/designation so
-ordinary guard stations and cabins are not published as fire lookouts.
+Current Phase 1 categories are `historic`, `interpretive`, and `lookout`.
+Interpretive rows with description under 80 characters and no detail URL are
+dropped; historic-keyword interpretive rows merge into `historic`. `OBSERVATION
+SITE` / wildlife-viewing subtypes are excluded.
+
+Phase 2 adds `nrhp` → `nrhp-pois.json` (listed historic sites in the target
+footprint; metadata-only — no prose in the NPS GIS layer).
 
 ## Live fetch
 

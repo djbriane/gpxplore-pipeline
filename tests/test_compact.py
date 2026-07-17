@@ -91,6 +91,30 @@ class PoiRecordTests(unittest.TestCase):
             "op": "USFS",
         })
 
+    def test_nrhp_compacts_ref_and_listing_year(self):
+        feat = {
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [-112.0, 46.0]},
+            "properties": {
+                "source": "nrhp",
+                "site_id": "123",
+                "name": "Test Historic Bridge",
+                "public_name": "Test Historic Bridge",
+                "category": "historic",
+                "subtype_raw": "STRUCTURE",
+                "state": "MT",
+                "ref_number": "66000424",
+                "significant_year": "1966",
+            },
+        }
+        result = compact.compact_features([feat])
+        records = result["files"]["nrhp-pois.json"]
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["t"], "historic")
+        self.assertEqual(records[0]["src"], "nrhp")
+        self.assertEqual(records[0]["ref"], "66000424")
+        self.assertEqual(records[0]["yr"], "1966")
+
 
 class GoldenFileTests(unittest.TestCase):
     """samples/normalized-sample.geojson -> samples/camp-record-sample.json.

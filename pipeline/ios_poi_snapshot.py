@@ -16,7 +16,10 @@ from . import common
 from .ios_snapshot import IdAssigner, sanitize_url
 
 MARKER_FIELDS = {"i", "n", "t", "y", "x"}
-POI_FILES = (("usfs-pois.json", "usfs"),)
+POI_FILES = (
+    ("usfs-pois.json", "usfs"),
+    ("nrhp-pois.json", "nrhp"),
+)
 SOFT_CEILING_MB = 10
 
 
@@ -95,11 +98,16 @@ def run(*, snapshot: str | None = None, compact_dir: Path | None = None,
     for fname, src in POI_FILES:
         path = src_dir / fname
         if not path.exists():
-            raise FileNotFoundError(f"compact output missing: {path}. Run `make compact` first.")
+            continue
         with open(path, encoding="utf-8") as f:
             records = json.load(f)
         print(f"  {src}: {len(records)} POI records")
         source_records[src] = records
+
+    if not source_records:
+        raise FileNotFoundError(
+            f"no POI compact output found under {src_dir}. Run `make compact` first."
+        )
 
     result = build_snapshot(source_records)
 
