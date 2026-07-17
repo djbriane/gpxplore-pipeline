@@ -19,6 +19,19 @@ def _feature(source="usfs_infra", site_id="1", lon=-112.0, lat=46.0, tier="likel
     return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]}, "properties": props}
 
 
+def _poi_feature(site_id="P1", lon=-112.0, lat=46.0, category="lookout", **extra):
+    props = {
+        "source": "usfs_infra_poi",
+        "site_id": site_id,
+        "name": "Test Lookout",
+        "category": category,
+        "snapshot_date": "2026-05-20",
+        "ingest_hash": common.make_hash("poi", site_id, lon, lat),
+    }
+    props.update(extra)
+    return {"type": "Feature", "geometry": {"type": "Point", "coordinates": [lon, lat]}, "properties": props}
+
+
 class HardCheckTests(unittest.TestCase):
     def test_clean_input_passes(self):
         report = validate.validate_features([_feature(site_id="1"), _feature(site_id="2")])
@@ -28,6 +41,15 @@ class HardCheckTests(unittest.TestCase):
         bad = _feature()
         bad["properties"]["reservation_tier"] = "totally_bogus"  # not in enum
         report = validate.validate_features([bad])
+        self.assertFalse(report["ok"])
+        self.assertGreater(report["hard_failures"]["schema_errors"], 0)
+
+    def test_poi_schema_passes(self):
+        report = validate.validate_features([_poi_feature()])
+        self.assertTrue(report["ok"])
+
+    def test_poi_schema_violation_fails(self):
+        report = validate.validate_features([_poi_feature(category="trailhead")])
         self.assertFalse(report["ok"])
         self.assertGreater(report["hard_failures"]["schema_errors"], 0)
 

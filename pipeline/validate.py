@@ -46,7 +46,8 @@ def validate_features(
     previous: list[dict[str, Any]] | None = None,
     near_zero_drop: float = NEAR_ZERO_DROP_DEFAULT,
 ) -> dict[str, Any]:
-    schema = common.load_schema("canonical-campground.schema.json")
+    campground_schema = common.load_schema("canonical-campground.schema.json")
+    poi_schema = common.load_schema("canonical-poi.schema.json")
 
     schema_errors: list[str] = []
     bounds_errors: list[str] = []
@@ -59,6 +60,7 @@ def validate_features(
         source = props.get("source", "?")
         by_source[source] = by_source.get(source, 0) + 1
 
+        schema = poi_schema if props.get("category") else campground_schema
         errs = common.validate_object(props, schema, path=f"feature[{i}]")
         if errs:
             schema_errors.extend(errs)

@@ -112,7 +112,7 @@ done
 echo ""
 if [[ $CONFIRM -eq 1 ]]; then
   echo "Done. Open a PR in each repo:"
-  echo "  gpxplore-web: apps/planner/public/data/{usfs,blm,state}-campgrounds.json"
+  echo "  gpxplore-web: apps/planner/public/data/{usfs,blm,state}-campgrounds.json + {usfs,nrhp}-pois.json"
   echo "  gpxplore-ios: gpxplore/Resources/Campgrounds/campground-{marker-index,detail}.json.gz"
 else
   echo "Dry run complete. Re-run with --confirm to write into gpxplore-web and gpxplore-ios."

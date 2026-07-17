@@ -21,6 +21,44 @@
       }
     },
     {
+      "id": "usfs_poi",
+      "source_tag": "usfs_infra_poi",
+      "adapter": "usfs_poi",
+      "label": "USFS National Recreation Sites (INFRA POIs)",
+      "fetch": {
+        "type": "manual_file",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/Recreation_Sites_INFRA.csv",
+        "offline_format": "csv",
+        "offline_sha256": "cdbdc4117d854d97fd0a2d2bd9fef8bbf0c99f8cfe5bb752a6f32dcbd8d5fa0d",
+        "offline_snapshot_date": "2026-05-20",
+        "live": {
+          "confirmed": false,
+          "note": "Phase 1 POI layer re-filters the existing USFS INFRA raw snapshot. Refresh the base usfs source snapshot, then rerun this adapter against the same file."
+        }
+      }
+    },
+    {
+      "id": "nrhp",
+      "source_tag": "nrhp",
+      "adapter": "nrhp",
+      "label": "NPS National Register of Historic Places",
+      "fetch": {
+        "type": "arcgis",
+        "offline_path": "campgrounds-pipeline-bundle/raw-sources/nrhp_locations.geojson",
+        "offline_format": "geojson",
+        "offline_sha256": "6e62b7a9708e3175a235ef4c933d058fa2bc46d9db484012fec24f0536da111a",
+        "offline_snapshot_date": "2026-07-06",
+        "live": {
+          "url": "https://mapservices.nps.gov/arcgis/rest/services/cultural_resources/nrhp_locations/MapServer/0/query",
+          "format": "geojson",
+          "page_size": 2000,
+          "where": "State IN ('ARIZONA','CALIFORNIA','COLORADO','IDAHO','MONTANA','OREGON','WASHINGTON','WYOMING')",
+          "confirmed": true,
+          "note": "Public NRHP point layer (properties under 10 acres). Larger districts are polygon-only on layer 1 — not included in v1. State values are full names in the GIS; the adapter maps to two-letter codes and filters to the campground footprint."
+        }
+      }
+    },
+    {
       "id": "blm",
       "source_tag": "blm_recreation",
       "adapter": "blm",

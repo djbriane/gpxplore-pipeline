@@ -18,7 +18,7 @@ SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot $(SNAPSHOT),)
 CONFIRM_ARG = $(if $(CONFIRM),--confirm,)
 DOWNSTREAM_SNAPSHOT_ARG = $(if $(SNAPSHOT),--snapshot=$(SNAPSHOT),)
 
-.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm ios-snapshot publish-downstream publish-all pipeline check-updates blm-verify test clean
+.PHONY: help fetch fetch-live normalize merge validate compact publish publish-confirm ios-snapshot ios-poi-snapshot publish-downstream publish-all pipeline check-updates blm-verify test clean
 
 help:
 	@echo "Campgrounds ingestion pipeline"
@@ -32,6 +32,7 @@ help:
 	@echo "  make publish                 Write reviewable artifact to data/publish/"
 	@echo "  make publish-confirm TARGET=<dir>  Copy compact output into an external dir"
 	@echo "  make ios-snapshot            Build gpxplore-ios's gzipped marker/detail snapshot from compact output"
+	@echo "  make ios-poi-snapshot        Build gpxplore-ios's gzipped POI marker/detail snapshot from compact output"
 	@echo "  make publish-downstream [CONFIRM=1]  Stage into gpxplore-web + build/copy iOS snapshot (dry run by default)"
 	@echo "  make publish-all [CONFIRM=1]  Run pipeline, then publish-downstream"
 	@echo "  make pipeline                Run fetch->normalize->merge->validate->compact"
@@ -66,6 +67,9 @@ publish-confirm:
 
 ios-snapshot:
 	$(PY) -m pipeline.cli ios-snapshot $(SNAPSHOT_ARG)
+
+ios-poi-snapshot:
+	$(PY) -m pipeline.cli ios-poi-snapshot $(SNAPSHOT_ARG)
 
 publish-downstream:
 	WEB_REPO=$(WEB_REPO) IOS_REPO=$(IOS_REPO) \

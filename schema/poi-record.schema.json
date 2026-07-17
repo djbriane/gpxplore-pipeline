@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gpxplore.example/schema/poi-record.schema.json",
+  "title": "POIRecord (compact, app-facing runtime shape)",
+  "description": "Short-key rider POI record shape shipped as review layers and consumed by downstream map clients.",
+  "type": "object",
+  "required": ["i", "n", "t", "y", "x"],
+  "properties": {
+    "i": { "type": "string", "description": "Stable id, unique within a source file." },
+    "n": { "type": "string", "description": "Display name, title-cased if source was all-caps." },
+    "t": {
+      "type": "string",
+      "enum": ["historic", "interpretive", "viewpoint", "lookout", "mine", "ghost_town", "landmark", "hot_spring"]
+    },
+    "y": { "type": "number", "minimum": -90, "maximum": 90 },
+    "x": { "type": "number", "minimum": -180, "maximum": 180 },
+    "src": { "type": "string", "enum": ["nrhp", "usfs_infra", "mrds", "gnis"] },
+    "sub": { "type": "string" },
+    "u": { "type": "string", "format": "uri" },
+    "el": { "type": "string" },
+    "st": { "type": "string" },
+    "yr": { "type": "string" },
+    "ref": { "type": "string" },
+    "com": { "type": "string" },
+    "desc": { "type": "string", "maxLength": 1400 },
+    "op": { "type": "string", "maxLength": 100 }
+  },
+  "additionalProperties": false
+}

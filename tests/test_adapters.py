@@ -12,6 +12,8 @@ from pipeline.normalize import ca as ca_adapter
 from pipeline.normalize import id_ as id_adapter
 from pipeline.normalize import mt as mt_adapter
 from pipeline.normalize import usfs as usfs_adapter
+from pipeline.normalize import usfs_poi as usfs_poi_adapter
+from pipeline.normalize import nrhp as nrhp_adapter
 from pipeline.normalize import az as az_adapter
 from pipeline.normalize import bc as bc_adapter
 from pipeline.normalize import or_ as or_adapter
@@ -90,6 +92,195 @@ class UsfsAdapterTests(unittest.TestCase):
         # deferred to the compact stage).
         self.assertEqual(p["water_availability"], "No water is available")
         self.assertEqual(feats[0]["geometry"]["coordinates"], [-112.61944, 47.07833])
+
+
+class UsfsPoiAdapterTests(unittest.TestCase):
+    FIELDS = [
+        "latitude", "longitude", "site_id", "objectid", "site_name", "public_site_name",
+        "site_subtype", "address_state", "states_spanned", "maximum_elevation",
+        "minimum_elevation", "recarea_description", "operated_by", "usda_portal_url",
+        "rec1stop_url", "official_designation", "alias_name", "alternative_name",
+        "recarea_name",
+    ]
+
+    def test_lookout_and_historic_rows_normalize_guard_station_dropped(self):
+        rows = [
+            {
+                "latitude": "48.7000", "longitude": "-114.8500", "site_id": "LO1",
+                "objectid": "1", "site_name": "STAHL PEAK LOOKOUT",
+                "public_site_name": "", "site_subtype": "Lookout/Cabin", "address_state": "MT",
+                "states_spanned": "", "maximum_elevation": "7300", "minimum_elevation": "",
+                "recarea_description": "A fire lookout with wide views.", "operated_by": "USFS",
+                "usda_portal_url": "https://www.fs.usda.gov/recarea/test", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "31.8500", "longitude": "-109.3500", "site_id": "H1",
+                "objectid": "2", "site_name": "CAMP RUCKER HISTORIC SITE",
+                "public_site_name": "Camp Rucker Historic Site", "site_subtype": "Interpretive Site",
+                "address_state": "AZ", "states_spanned": "", "maximum_elevation": "",
+                "minimum_elevation": "", "recarea_description": "Historic cavalry camp.",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "47.0", "longitude": "-113.0", "site_id": "CABIN1",
+                "objectid": "3", "site_name": "SOME GUARD STATION",
+                "public_site_name": "", "site_subtype": "Lookout/Cabin", "address_state": "MT",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "SOME GUARD STATION (Lookout/Cabin)",
+                "operated_by": "", "usda_portal_url": "",
+                "rec1stop_url": "", "official_designation": "", "alias_name": "",
+                "alternative_name": "", "recarea_name": "",
+            },
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = usfs_poi_adapter.normalize(path, "2026-05-20", "usfs_infra_poi")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 2)
+        by_id = {f["properties"]["site_id"]: f["properties"] for f in feats}
+        self.assertEqual(by_id["LO1"]["category"], "lookout")
+        self.assertEqual(by_id["LO1"]["state"], "MT")
+        self.assertEqual(by_id["LO1"]["subtype_raw"], "LOOKOUT/CABIN")
+        self.assertEqual(by_id["H1"]["category"], "historic")
+        self.assertEqual(by_id["H1"]["state"], "AZ")
+
+    def test_observation_site_and_thin_interpretive_overlook_dropped(self):
+        rows = [
+            {
+                "latitude": "44.2898", "longitude": "-121.7632", "site_id": "OV1",
+                "objectid": "10", "site_name": "WINDY POINT OVERLOOK",
+                "public_site_name": "", "site_subtype": "Observation Site", "address_state": "OR",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "Interpretive site overlooking lava flow on the McKenzie Pass Scenic Byway.",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "42.5000", "longitude": "-122.0000", "site_id": "IO1",
+                "objectid": "11", "site_name": "LAKE GRANBY OVERLOOK",
+                "public_site_name": "", "site_subtype": "Interpretive Site", "address_state": "CO",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "LAKE GRANBY OVERLOOK (Interpretive Site)",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "31.8500", "longitude": "-109.3500", "site_id": "H2",
+                "objectid": "12", "site_name": "CAMP RUCKER HISTORIC SITE",
+                "public_site_name": "Camp Rucker Historic Site", "site_subtype": "Interpretive Site",
+                "address_state": "AZ", "states_spanned": "", "maximum_elevation": "",
+                "minimum_elevation": "", "recarea_description": "Historic cavalry camp.",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = usfs_poi_adapter.normalize(path, "2026-05-20", "usfs_infra_poi")
+        finally:
+            path.unlink()
+
+        self.assertEqual(len(feats), 1)
+        self.assertEqual(feats[0]["properties"]["site_id"], "H2")
+
+    def test_thin_interpretive_without_url_dropped(self):
+        rows = [
+            {
+                "latitude": "44.0", "longitude": "-114.0", "site_id": "K1",
+                "objectid": "20", "site_name": "SOME KIOSK",
+                "public_site_name": "", "site_subtype": "Interpretive Site", "address_state": "ID",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "Short blurb.",
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+            {
+                "latitude": "44.1", "longitude": "-114.1", "site_id": "K2",
+                "objectid": "21", "site_name": "INYO CRATERS",
+                "public_site_name": "", "site_subtype": "Interpretive Site", "address_state": "CA",
+                "states_spanned": "", "maximum_elevation": "", "minimum_elevation": "",
+                "recarea_description": "A" * 120,
+                "operated_by": "", "usda_portal_url": "", "rec1stop_url": "",
+                "official_designation": "", "alias_name": "", "alternative_name": "",
+                "recarea_name": "",
+            },
+        ]
+        path = _write_csv(rows, self.FIELDS)
+        try:
+            feats = usfs_poi_adapter.normalize(path, "2026-05-20", "usfs_infra_poi")
+        finally:
+            path.unlink()
+        self.assertEqual(len(feats), 1)
+        self.assertEqual(feats[0]["properties"]["site_id"], "K2")
+
+
+class NrhpAdapterTests(unittest.TestCase):
+    def test_maps_listed_site_to_historic_poi(self):
+        fc = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [-112.0, 46.0]},
+                "properties": {
+                    "OBJECTID": 123,
+                    "RESNAME": "Test Historic Bridge",
+                    "NRIS_Refnum": "66000424",
+                    "CertDate": "10/15/66",
+                    "ResType": "structure",
+                    "State": "MONTANA",
+                    "County": "Gallatin",
+                },
+            }],
+        }
+        path = Path(__file__).parent / "_tmp_nrhp.geojson"
+        path.write_text(json.dumps(fc), encoding="utf-8")
+        try:
+            feats = nrhp_adapter.normalize(path, "2026-07-06", "nrhp")
+        finally:
+            path.unlink(missing_ok=True)
+
+        self.assertEqual(len(feats), 1)
+        props = feats[0]["properties"]
+        self.assertEqual(props["category"], "historic")
+        self.assertEqual(props["state"], "MT")
+        self.assertEqual(props["ref_number"], "66000424")
+        self.assertEqual(props["significant_year"], "1966")
+        self.assertEqual(props["subtype_raw"], "STRUCTURE")
+
+    def test_out_of_footprint_state_dropped(self):
+        fc = {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [-90.0, 30.0]},
+                "properties": {
+                    "OBJECTID": 1,
+                    "RESNAME": "Louisiana Site",
+                    "NRIS_Refnum": "99009999",
+                    "CertDate": "01/01/90",
+                    "ResType": "building",
+                    "State": "LOUISIANA",
+                    "County": "Orleans",
+                },
+            }],
+        }
+        path = Path(__file__).parent / "_tmp_nrhp2.geojson"
+        path.write_text(json.dumps(fc), encoding="utf-8")
+        try:
+            feats = nrhp_adapter.normalize(path, "2026-07-06", "nrhp")
+        finally:
+            path.unlink(missing_ok=True)
+        self.assertEqual(feats, [])
 
 
 class MtRollupTests(unittest.TestCase):
