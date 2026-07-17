@@ -20,7 +20,17 @@ Tunnel is the public front door. **$0/mo.** Decision context: wayfinder ticket
 - **Two images, same Valhalla version** (tile format is version-tied):
   - **serve** = `djbriane/valhalla:<ver>` — your Docker Hub image, a thin `FROM official + serve entrypoint`. Tiles are **not** baked in.
   - **build** = `ghcr.io/valhalla/valhalla:<ver>` — the official image; `build-tiles.sh` drives its raw binaries.
-- **Data** lives in `/mnt/user/appdata/valhalla` (mounted as `/data`): `valhalla.json`, `tiles/` (~4.5 GB), `admins.sqlite`, `timezones.sqlite` (optional), `extract.osm.pbf` (~3.1 GB), `surface_provenance.sqlite` (sidecar, #11), `tile_manifest.json`.
+- **Data** lives under `/mnt/user/appdata/valhalla`. Since #14 each build is a self-contained,
+  versioned directory and the serve container mounts a `current` symlink at the active one:
+  ```
+  /mnt/user/appdata/valhalla/
+    builds/us-west-<YYMMDD>/   valhalla.json, tiles/ (~4.5 GB), admins.sqlite, timezones.sqlite,
+                              surface_provenance.sqlite (sidecar, #11), tile_manifest.json
+    builds/us-west-<prev>/     the retained N-1 build (rollback target)
+    current -> builds/us-west-<YYMMDD>   the serve container mounts THIS as /data
+    extract.osm.pbf            (~3.1 GB) shared scratch input — reused/overwritten, NOT kept per build
+  ```
+  Retention & rollback: §4b.
 - **Measured** (#5): build ~20–25 min, peak build RAM ~11 GB (trivial on 32 GB — native Docker gives full host RAM, no VM cap), serving RAM ~420 MB (tiles are lazy-loaded/mmap'd).
 
 ### ⚠️ Image-source guardrail (this bit us before)
@@ -36,9 +46,11 @@ Tunnel is the public front door. **$0/mo.** Decision context: wayfinder ticket
 | file | role |
 |---|---|
 | `Dockerfile` | thin serve image: `FROM ghcr.io/valhalla/valhalla:<ver>` + `valhalla_service` entrypoint |
-| `valhalla-serve.xml` | custom Unraid template → `djbriane/valhalla`, `/data` mount, port 8002, no command args |
-| `build-tiles.sh` | one-shot NUC build: download extract → config/admins/(timezones)/tiles → **surface sidecar (#11)** → provenance manifest → restart serve container |
-| `build_surface_sidecar.py` | pyosmium pass over the *same* extract → `surface_provenance.sqlite` (`way_id` → explicit surface tags); invoked by `build-tiles.sh` in a throwaway `python:3.12-slim` container (#11) |
+| `valhalla-serve.xml` | custom Unraid template → `djbriane/valhalla`, `/data` mount at `…/valhalla/current`, port 8002, no command args |
+| `cloudflared.xml` | custom Unraid template → Cloudflare Tunnel connector (dashboard token model), the outbound-only front door (#14, §7) |
+| `build-tiles.sh` | one-shot NUC build: download extract → config/admins/(timezones)/tiles → **surface sidecar (#11)** → provenance manifest → **promote `current` symlink + prune to N-1 (#14)** → restart serve container |
+| `rollback.sh` | repoint `current` at the previous (or a named) retained build + restart serve — no rebuild (#14, §4b) |
+| `build_surface_sidecar.py` | pyosmium pass over the *same* extract → `surface_provenance.sqlite` (`way_id` → explicit surface tags); invoked by `build-tiles.sh` in a throwaway `debian:bookworm-slim` container (#11) |
 | `verify_sidecar.py` | post-build check: re-runs #6's BDR tracks through `trace_attributes` with `edge.way_id`, joins the sidecar, reports the tagged/inferred/unknown split (#11) |
 | `README.md` | this runbook |
 
@@ -59,12 +71,18 @@ docker buildx imagetools inspect djbriane/valhalla:3.8.2 | grep -i platform
 **Method 1 — import the template (repeatable):**
 1. Copy `valhalla-serve.xml` to the NUC at `/boot/config/plugins/dockerMan/templates-user/my-valhalla.xml` (the flash `config` share).
 2. Unraid → **Docker → Add Container** → **Template** dropdown → **User templates → valhalla**.
-3. Confirm image `djbriane/valhalla:3.8.2`, path `/data`→`/mnt/user/appdata/valhalla`, port `8002`; set **Restart policy: unless-stopped** → **Apply**.
+3. Confirm image `djbriane/valhalla:3.8.2`, path `/data`→`/mnt/user/appdata/valhalla/current`, port `8002`; set **Restart policy: unless-stopped** → **Apply**.
 
-**Method 2 — manual Add Container (no file):** Name `valhalla`; Repository `djbriane/valhalla:3.8.2`; Network `bridge`; Path `/data`↔`/mnt/user/appdata/valhalla` (rw); Port `8002`↔`8002` (tcp); Extra Parameters `--restart unless-stopped`; no Post Arguments → Apply.
+**Method 2 — manual Add Container (no file):** Name `valhalla`; Repository `djbriane/valhalla:3.8.2`; Network `bridge`; Path `/data`↔`/mnt/user/appdata/valhalla/current` (rw); Port `8002`↔`8002` (tcp); Extra Parameters `--restart unless-stopped`; no Post Arguments → Apply.
+
+> **Mount the `current` symlink, not the appdata root (#14).** `build-tiles.sh` builds into
+> `builds/us-west-<YYMMDD>/` and flips `current` at the finished build; the serve container follows
+> that symlink. It won't exist until the first build runs — start the container after §3c (or it will
+> report a missing `/data`), or run §3c first.
 
 ### 3c. Build the tiles on the NUC
-See §4. The serve container has nothing to serve until this runs.
+See §4. The serve container has nothing to serve until this runs — the first build also creates the
+`current` symlink the container mounts.
 
 ### 3d. Smoke test
 ```bash
@@ -79,7 +97,12 @@ Geometry back = live.
 
 ## 4. Building / refreshing tiles
 
-Run `build-tiles.sh` on the NUC (it uses the NUC's Docker).
+Run `build-tiles.sh` on the NUC (it uses the NUC's Docker). Since #14 it builds into a **versioned,
+self-contained** directory (`builds/us-west-<YYMMDD>/`) and only **on success** atomically flips the
+`current` symlink at it, then prunes to the newest `$RETAIN` builds (default 2 = current + N-1) and
+restarts the serve container. The in-progress build is invisible to the serve container until the flip,
+so a failed or half-finished build never takes the service down (the old `current` keeps serving).
+Rollback and the retention knobs: §4b.
 
 > **⚠️ Copy BOTH scripts together.** Since #11, `build-tiles.sh` invokes its sibling
 > `build_surface_sidecar.py` (it mounts its own directory into the sidecar container via
@@ -94,7 +117,9 @@ Run `build-tiles.sh` on the NUC (it uses the NUC's Docker).
   (`bash /path/to/build-tiles.sh`) rather than pasting the body → **Run in Background**. (Or
   `BUILD_SIDECAR=0` to keep the old paste-only flow, tiles only.)
 
-The standalone block below is **tiles-only** (no sidecar) — for the sidecar use `build-tiles.sh`.
+The standalone block below is **tiles-only** (no sidecar, **no versioning/promotion**) — it builds
+flat into `$APPDATA` for illustration. For the sidecar, the `current` symlink, and N-1 retention, use
+`build-tiles.sh`.
 
 ```bash
 APPDATA=/mnt/user/appdata/valhalla
@@ -113,7 +138,9 @@ Notes:
 - **`valhalla_build_timezones` writes to STDOUT** — you must `>` redirect it to a file, not pass a path. (Timezones are optional — only needed for time-of-day routing, which gpxplore doesn't use. `BUILD_TIMEZONES=0` skips it.)
 - **`admins.sqlite`** gives border/driving-side attribution — cheap, keep it.
 - **No elevation** in the build (the app derives elevation/effort from GPX geometry).
-- **Disk budget** in appdata: extract ~3.1 GB + tiles ~4.5 GB + sidecar (tens of MB) ≈ **8 GB**.
+- **Disk budget** in appdata: extract ~3.1 GB (one shared copy) + tiles ~4.5 GB + sidecar (tens of MB)
+  **per retained build**. With the default N-1 retention (`RETAIN=2`) that's ~**12 GB**
+  (3.1 + 2×~4.5). Set `RETAIN=1` to keep only the current build (~8 GB, no rollback target).
 - **Provenance**: `build-tiles.sh` writes `tile_manifest.json` (`data_version = us-west-<YYMMDD>`, extract sha, Valhalla version, plus a `sidecar` block) — the version handle the API wrapper (#10) stamps on responses.
 - **Costing profiles** (`motorcycle` + `adv_balanced`/`avoid_highways`, #7) are request-time options handled by the API wrapper — not part of the tile build.
 
@@ -146,6 +173,50 @@ The sidecar pass runs pyosmium in a throwaway `debian:bookworm-slim` container (
 none). It installs Debian's **prebuilt** `python3-pyosmium` (3.6.0) via `apt` per run — deliberately
 **not** `pip install osmium`, which ships no wheels and would compile from source (cmake/boost/protozero).
 Needs internet during the build; override the image with `PYOSMIUM_IMAGE`.
+
+---
+
+## 4b. Retention & rollback (#14)
+
+The serve container mounts `/mnt/user/appdata/valhalla/current`, a symlink into `builds/`. Each build
+lands in its own `builds/us-west-<YYMMDD>/`; `build-tiles.sh` flips `current` at it **only after the
+build succeeds**, then keeps the newest `$RETAIN` builds (default **2** = current + the previous, N-1)
+and deletes older ones. So the previous good tile set is always on disk as a rollback target.
+
+**Why a symlink.** The flip is atomic (`ln -sfn` + `mv -T`), so there's never a window where `current`
+is missing or points at a half-built directory. Docker resolves the bind-mount source when the
+container (re)starts, so **`docker restart valhalla` after a flip re-resolves `current`** and the
+container comes up on the new build — that's the hot-swap `build-tiles.sh` does at the end, and the
+same mechanism `rollback.sh` relies on.
+
+**Roll back** (no rebuild — just repoint + restart):
+```bash
+./rollback.sh --list          # show retained builds; * marks current
+./rollback.sh                 # roll back to the previous (N-1) build
+./rollback.sh us-west-260701  # roll to a specific retained build
+```
+It refuses if there's no previous build or the named build isn't retained. `RETAIN` on `build-tiles.sh`
+controls how many builds survive a rebuild (`RETAIN=1` keeps only current and leaves no rollback
+target; a larger value keeps more history at ~4.5 GB each).
+
+**Verify (AC #14):** after a fresh build, `readlink /mnt/user/appdata/valhalla/current` points at the
+new `builds/us-west-<YYMMDD>`, `ls builds/` shows the N-1 build still present, and `./rollback.sh`
+followed by the §3d smoke test serves the previous tiles; roll forward again with
+`./rollback.sh us-west-<new>`. `current/tile_manifest.json` is the `data_version` source of truth and
+is readable off `/data` in the serve container (`docker exec valhalla cat /data/tile_manifest.json`).
+
+> **Confirm the serve container binds the symlink, not a resolved path.** The hot-swap relies on Docker
+> re-resolving `current` at each restart — standard bind-mount behavior. Sanity-check once:
+> `docker inspect valhalla -f '{{json .HostConfig.Binds}}'` should show `…/valhalla/current`, **not** a
+> canonicalized `…/builds/us-west-<YYMMDD>`. If it shows a resolved build path, the mount was created
+> against the target rather than the symlink — recreate the container with the `…/current` path (§3b).
+
+**Migrating an existing flat install.** If the NUC already has tiles built flat in
+`/mnt/user/appdata/valhalla` (pre-#14), just run the new `build-tiles.sh` once: it creates
+`builds/us-west-<YYMMDD>/` + `current` and repoints the container (update its mount to `…/current`
+first, §3b). The old flat `tiles/`, `valhalla.json`, `admins.sqlite`, `surface_provenance.sqlite`,
+`tile_manifest.json` at the appdata root are now orphaned — delete them after verifying the new build
+serves, to reclaim ~4.5 GB. (`extract.osm.pbf` stays; it's the shared scratch input.)
 
 ---
 
@@ -243,12 +314,87 @@ the **root password**, a separate path from SSH keys. In order of convenience:
 
 ---
 
-## 7. Exposure — Cloudflare Tunnel (planned)
+## 7. Exposure — Cloudflare Tunnel + Access (#14)
 
-Run `cloudflared` (Unraid container) with a tunnel routing a hostname → `http://<nuc-ip>:8002`.
-Outbound-only — **no ports opened on the router.** Cloudflare's edge supplies CORS / rate-limit / WAF.
-Per #10, the **wrapper Worker** (chunking, `surface_class`, versioning) sits in front and treats this
-tunnel origin as its private backend: `browser → Worker → Tunnel → NUC Valhalla`.
+Front the NUC origin with a **Cloudflare Tunnel** (outbound-only — **no ports opened on the router**)
+and lock it down with a **Cloudflare Access** policy so only a credentialed caller reaches Valhalla; the
+public internet gets a **403**. Topology (final): `browser → Worker (#10) → Tunnel → NUC Valhalla`;
+Cloudflare's edge supplies TLS / CORS / rate-limit / WAF. The Worker doesn't exist yet, so today an
+**email** Access policy also lets *you* reach the hostname in a browser for testing.
+
+**Prerequisites:** a domain on Cloudflare (free plan is fine — the Tunnel needs a zone to attach a
+public hostname to) and Cloudflare **Zero Trust** enabled on the account (free tier covers this).
+
+### 7a. Create the tunnel (dashboard, token-based)
+1. **one.dash.cloudflare.com → Networks → Tunnels → Create a tunnel** → connector type **Cloudflared** →
+   name it (e.g. `nuc-valhalla`).
+2. On the install screen, **copy the token** (the long string after `--token`). Ignore the OS install
+   snippets — it runs as a container.
+
+### 7b. Run the connector on Unraid
+Add the `cloudflared` container from **`cloudflared.xml`** in this dir (Docker → Add Container → User
+templates → cloudflared), paste the token into **`TUNNEL_TOKEN`**, restart policy **unless-stopped**,
+Apply. Within ~30 s the tunnel shows **HEALTHY** in the dashboard. Outbound-only; nothing opened on the
+router.
+
+**Origin reachability** — cloudflared has to reach the Valhalla container. Two ways:
+- **Simple:** point the public hostname (§7c) at the NUC's LAN IP — `http://<NUC-LAN-IP>:8002`. Give the
+  NUC a **DHCP reservation** so the IP is stable.
+- **Cleaner (no IP dependency):** put the `valhalla` and `cloudflared` containers on the **same
+  user-defined Docker network** and use `http://valhalla:8002`. Cloudflare's own docs recommend keeping
+  `cloudflared` on the same network as the origin.
+
+### 7c. Add the public hostname
+Tunnel → **Public Hostnames → Add a public hostname**: Subdomain `valhalla` (or `routing`) · Domain =
+your Cloudflare domain · Service **HTTP** → `<NUC-LAN-IP>:8002` (or `valhalla:8002` if same network) →
+Save. Cloudflare auto-creates the DNS CNAME and terminates TLS at the edge. (The #15 NUC-side helper
+will later add a *second* hostname behind this same tunnel — not a second public surface.)
+
+### 7d. Lock it down — Cloudflare Access (this is the AC that gives the origin its privacy)
+Straight off §7c the hostname is **wide open** — anyone with the URL can burn the NUC's CPU. Put a
+**Cloudflare Access** application on it with **two policies** on the same app (Access allows any matching
+policy through):
+
+**one.dash.cloudflare.com → Access → Applications → Add an application → Self-hosted**, Application
+domain = your `valhalla.<domain>` hostname, then add policies:
+
+- **Service-token policy (end state, per #10 — this is what makes public requests 403).** First
+  **Access → Service Auth → Service Tokens → Create** a token; save the **Client ID** and **Client
+  Secret** (shown once). Then on the app add a policy with **Action = Service Auth**, Include =
+  **Service Token = `<that token>`**. The future Worker attaches `CF-Access-Client-Id` /
+  `CF-Access-Client-Secret` (as Worker secrets) on every origin subrequest; a request without them → 403.
+- **Email policy (interim, so you can test in a browser now).** Action = **Allow**, Include =
+  **Emails = `<your email>`**. Cloudflare emails you a one-time PIN; after login the browser reaches the
+  hostname. Remove or tighten this once the Worker is the only intended caller.
+
+> The **Access policy — not the Tunnel — is what closes the origin.** A bare tunnel hostname is public;
+> the 403 acceptance criterion is satisfied by the Access application above.
+
+### 7e. Verify end-to-end (AC #14)
+```bash
+DOMAIN=valhalla.yourdomain.com
+# 1. Uncredentialed public request -> BLOCKED by Access, NOT served by Valhalla:
+curl -s -o /dev/null -w '%{http_code}\n' https://$DOMAIN/status
+#    Expect NOT 200. Exact code depends on which policies are on the app:
+#      - service-token policy ONLY (end state, per AC #3): 403.
+#      - with the interim EMAIL policy also present: 302 -> Access login page (still blocked).
+#    Either way the request never reaches Valhalla. To assert the literal 403, test while the
+#    service-token policy is the app's ONLY policy.
+
+# 2. Credentialed request (service-token headers) -> reaches Valhalla:
+curl -s https://$DOMAIN/status \
+  -H "CF-Access-Client-Id: <client-id>" \
+  -H "CF-Access-Client-Secret: <client-secret>" | head -c 200            # expect 200 + status JSON
+
+# 3. Credentialed POST /route, costing motorcycle -> geometry back (§3d, now through the tunnel):
+curl -s https://$DOMAIN/route \
+  -H "CF-Access-Client-Id: <client-id>" \
+  -H "CF-Access-Client-Secret: <client-secret>" \
+  --data '{"locations":[{"lat":39.7392,"lon":-104.9903},{"lat":40.015,"lon":-105.2705}],"costing":"motorcycle"}' \
+  | head -c 300
+```
+`(1)` blocked (302/403, not 200) and `(2)`/`(3)` = 200 with geometry ⇒ the origin is reachable **only**
+by a credentialed caller, worldwide over HTTPS, with zero open router ports.
 
 **Fallback:** if routing ever needs datacenter reliability, the same tiles + serve image drop onto
 Hetzner CAX11 (~$6.50/mo) — only the origin location changes. See `specs/valhalla-hosting--research.md`.
@@ -268,3 +414,9 @@ Hetzner CAX11 (~$6.50/mo) — only the origin location changes. See `specs/valha
 | sidecar step: `No such file … build_surface_sidecar.py` | `build-tiles.sh` was pasted/run without its sibling `build_surface_sidecar.py` in the same dir (it mounts its own `${BASH_SOURCE[0]}` dir) | copy **both** files to the same NUC dir and run by path (§4). Tiles still built fine — just rerun for the sidecar. |
 | sidecar step fails at `apt-get install python3-pyosmium` | no outbound internet in the throwaway container, or Debian mirror hiccup | ensure the NUC has internet during build. `BUILD_SIDECAR=0` skips the sidecar without blocking tiles. (Do **not** switch to `pip install osmium` — it has no wheels and compiles from source.) |
 | `verify_sidecar.py` shows LOW tagged / ZERO inferred | sidecar and tiles built from *different* extracts, or `edge.way_id` missing from the request filter | rebuild tiles + sidecar in one `build-tiles.sh` run (shared `data_version`); confirm the request lists `edge.way_id`. |
+| serve container won't start / `/data` empty after Add Container | mounted `…/valhalla/current` but no build has run yet, so the symlink doesn't exist | run `build-tiles.sh` once (creates `builds/…` + `current`), then start the container (§3b, §3c). |
+| built new tiles but the service still serves the old ones | serve container wasn't restarted, so its bind mount still points at the previous `current` target | `docker restart valhalla` (build-tiles.sh does this automatically; `rollback.sh` too). Restart re-resolves the symlink. |
+| `rollback.sh`: "no previous build to roll back to" | only one build retained (`RETAIN=1`, or the NUC has only ever built once) | nothing to roll back to; rebuild history accrues as you run `build-tiles.sh` with `RETAIN>=2`. |
+| tunnel never goes HEALTHY in the dashboard | wrong/expired `TUNNEL_TOKEN`, or no outbound internet from the NUC | recopy the token from the tunnel's install screen into the `cloudflared` container; confirm the NUC has outbound HTTPS. |
+| cloudflared logs `dial tcp: lookup valhalla … no such host` | hostname points at `valhalla:8002` but the two containers aren't on the same user-defined Docker network | put both on one custom network, or point the public hostname at `<NUC-LAN-IP>:8002` instead (§7b). |
+| every request to the tunnel hostname returns 403 (including your own browser) | Access is doing its job, but there's no policy that admits you | add the **email** Allow policy (§7d) and complete the one-time-PIN login; service-token callers must send the `CF-Access-Client-*` headers. |

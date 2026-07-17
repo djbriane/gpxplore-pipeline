@@ -30,6 +30,6 @@
   <DonateText/>
   <DonateLink/>
   <Requires/>
-  <Config Name="Tiles + config (/data)" Target="/data" Default="/mnt/user/appdata/valhalla" Mode="rw" Description="Appdata holding valhalla.json, tiles/, admins.sqlite, timezones.sqlite, tile_manifest.json — produced by build-tiles.sh." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/valhalla</Config>
+  <Config Name="Tiles + config (/data)" Target="/data" Default="/mnt/user/appdata/valhalla/current" Mode="rw" Description="The ACTIVE build: /mnt/user/appdata/valhalla/current is a symlink build-tiles.sh flips to the newest builds/us-west-YYMMDD/ (valhalla.json, tiles/, admins.sqlite, timezones.sqlite, surface_provenance.sqlite, tile_manifest.json). Restart this container after a build or rollback.sh so it re-resolves the symlink. (#14)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/valhalla/current</Config>
   <Config Name="API port" Target="8002" Default="8002" Mode="tcp" Description="Valhalla HTTP API (POST /route, /trace_attributes; GET /status). Point cloudflared / the wrapper Worker origin here." Type="Port" Display="always" Required="true" Mask="false">8002</Config>
 </Container>
