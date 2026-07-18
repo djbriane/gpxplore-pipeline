@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+  Custom Unraid template — gpxplore surface enrichment helper (#15).
+  Put this container and `valhalla` on the same user-defined Docker network.
+  Front the helper with the existing Cloudflare Tunnel and an Access
+  service-token policy; do not open port 8003 on the router.
+-->
+<Container version="2">
+  <Name>gpxplore-enrichment</Name>
+  <Repository>djbriane/gpxplore-enrichment:latest</Repository>
+  <Registry>https://hub.docker.com/r/djbriane/gpxplore-enrichment</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/djbriane/gpxplore-pipeline</Project>
+  <Overview>NUC-side whole-route surface enrichment for gpxplore. Chunks GPX points, calls Valhalla trace_attributes, joins the co-versioned surface sidecar, and returns the normalized surface composite. Keep behind Cloudflare Tunnel + Access.</Overview>
+  <Category>Other:</Category>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/valhalla/valhalla/master/docs/images/valhalla_logo.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires>Valhalla on the same Docker network; a completed build containing surface_provenance.sqlite and tile_manifest.json.</Requires>
+  <Config Name="Tiles + sidecar (/data)" Target="/data" Default="/mnt/user/appdata/valhalla/current" Mode="ro" Description="The same active build mounted by Valhalla. The helper reads tile_manifest.json and surface_provenance.sqlite; keep this mount read-only." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/valhalla/current</Config>
+  <Config Name="Valhalla origin" Target="VALHALLA_URL" Default="http://valhalla:8002" Mode="" Description="Internal Valhalla base URL. The hostname works when both containers share a user-defined Docker network; otherwise use the NUC LAN URL." Type="Variable" Display="always" Required="true" Mask="false">http://valhalla:8002</Config>
+</Container>

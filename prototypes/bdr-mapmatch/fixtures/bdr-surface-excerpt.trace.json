@@ -1,0 +1,96 @@
+{
+  "source": "Reconstructed from the field shapes and surface mix recorded by gpxplore-pipeline#6; the prototype retained its report but not raw Valhalla response JSON.",
+  "point_count": 5,
+  "chunks": [
+    {
+      "start_index": 0,
+      "end_index": 2,
+      "distance_m": 750,
+      "response": {
+        "edges": [
+          {
+            "id": 101,
+            "way_id": 7001,
+            "surface": "paved_smooth",
+            "road_class": "tertiary",
+            "use": "road",
+            "length": 0.25
+          },
+          {
+            "id": 102,
+            "way_id": 7002,
+            "surface": "gravel",
+            "road_class": "unclassified",
+            "use": "road",
+            "length": 0.5
+          }
+        ],
+        "matched_points": [
+          {
+            "type": "matched",
+            "distance_from_trace_point": 1.2,
+            "edge_index": 0
+          },
+          {
+            "type": "matched",
+            "distance_from_trace_point": 2.5,
+            "edge_index": 1
+          },
+          {
+            "type": "matched",
+            "distance_from_trace_point": 3.1,
+            "edge_index": 1
+          }
+        ]
+      }
+    },
+    {
+      "start_index": 2,
+      "end_index": 4,
+      "distance_m": 1000,
+      "response": {
+        "edges": [
+          {
+            "id": 102,
+            "way_id": 7002,
+            "surface": "gravel",
+            "road_class": "unclassified",
+            "use": "road",
+            "length": 0.5
+          },
+          {
+            "id": 103,
+            "way_id": 0,
+            "surface": "dirt",
+            "road_class": "service_other",
+            "use": "track",
+            "length": 0.3
+          },
+          {
+            "id": 104,
+            "way_id": 7004,
+            "surface": "compacted",
+            "road_class": "service_other",
+            "use": "track",
+            "length": 0.2
+          }
+        ],
+        "matched_points": [
+          {
+            "type": "matched",
+            "distance_from_trace_point": 3.1,
+            "edge_index": 0
+          },
+          {
+            "type": "unmatched"
+          },
+          {
+            "type": "matched",
+            "distance_from_trace_point": 4.4,
+            "edge_index": 2
+          }
+        ]
+      }
+    }
+  ]
+}

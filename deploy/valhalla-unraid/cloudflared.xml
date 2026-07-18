@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<!--
+  Custom Unraid template — Cloudflare Tunnel connector (cloudflared) for the Valhalla origin (#14).
+  Dashboard/token model: the tunnel, its public hostname(s), and the Access policy are configured
+  in the Cloudflare Zero Trust dashboard (one.dash.cloudflare.com > Networks > Tunnels). This
+  container just runs the connector with that tunnel's token — outbound-only, NO router ports opened.
+
+  Setup order (details in README.md §7):
+    1. Dashboard > Networks > Tunnels > Create a tunnel (connector: Cloudflared). Copy the token.
+    2. Paste the token into TUNNEL_TOKEN below and Apply. Within ~30s the tunnel shows HEALTHY.
+    3. Dashboard > that tunnel > Public Hostnames > add valhalla.<domain> -> HTTP -> the origin.
+    4. Dashboard > Access > Applications: put an Access policy on that hostname (email + service token).
+
+  Origin reachability: cloudflared must reach the Valhalla container. Simplest is the NUC LAN IP
+  (http://<NUC-LAN-IP>:8002, give the NUC a DHCP reservation). Cleaner is putting THIS container and
+  the `valhalla` serve container on the SAME user-defined Docker network and using http://valhalla:8002
+  (no IP dependency) — set <Network> below to that network's name on both containers.
+-->
+<Container version="2">
+  <Name>cloudflared</Name>
+  <Repository>cloudflare/cloudflared:latest</Repository>
+  <Registry>https://hub.docker.com/r/cloudflare/cloudflared</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/cloudflare/cloudflared</Project>
+  <Overview>Cloudflare Tunnel connector for the gpxplore Valhalla origin (#14). Runs the dashboard-managed tunnel with TUNNEL_TOKEN; the public hostname and Cloudflare Access policy are configured in the Zero Trust dashboard. Outbound-only: no router ports opened. Put on the same Docker network as the valhalla container to reach it as http://valhalla:8002, or point the dashboard hostname at the NUC LAN IP:8002.</Overview>
+  <Category>Network:Other</Category>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/cloudflare/cloudflared/master/cmd/cloudflared/cloudflared.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <!-- Dashboard-managed run mode: ingress + Access live in the dashboard, keyed by the token. -->
+  <PostArgs>tunnel --no-autoupdate run</PostArgs>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="TUNNEL_TOKEN" Target="TUNNEL_TOKEN" Default="" Mode="" Description="The token string from Dashboard > Networks > Tunnels > (your tunnel) install screen (the long value after --token). Treat as a secret." Type="Variable" Display="always" Required="true" Mask="true"/>
+</Container>

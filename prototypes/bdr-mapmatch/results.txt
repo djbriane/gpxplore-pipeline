@@ -1,0 +1,124 @@
+
+### WABDR-Apr2026-v2: 20812 raw pts -> 400 sampled (~200m spacing)
+
+======================================================================
+WABDR-Apr2026-v2
+  points sent: 400  |  matched: 400/400 (100%)  interpolated: 0  unmatched: 0
+  snap dist (m): p50=2.8  p90=7.2  max=20.3
+  matched path: 99.3 km over 230 edges
+  surface (Valhalla enum, by distance):
+      gravel             67.4 km  (68%)
+      paved_smooth       20.6 km  (21%)
+      dirt               11.2 km  (11%)
+      compacted           0.1 km  (0%)
+    -> unknown/none surface: 0% of distance
+  road_class (by distance):
+      unclassified       53.2 km  (54%)
+      service_other      27.5 km  (28%)
+      tertiary           10.9 km  (11%)
+      secondary           4.5 km  (5%)
+      residential         3.2 km  (3%)
+  edge.use (by distance):
+      road               71.8 km  (72%)
+      track              27.5 km  (28%)
+
+### COBDR-Mar2026: 17227 raw pts -> 400 sampled (~200m spacing)
+
+======================================================================
+COBDR-Mar2026
+  points sent: 400  |  matched: 400/400 (100%)  interpolated: 0  unmatched: 0
+  snap dist (m): p50=2.2  p90=6.8  max=29.2
+  matched path: 118.4 km over 186 edges
+  surface (Valhalla enum, by distance):
+      gravel            111.8 km  (94%)
+      paved_smooth        5.0 km  (4%)
+      dirt                1.6 km  (1%)
+    -> unknown/none surface: 0% of distance
+  road_class (by distance):
+      tertiary           57.8 km  (49%)
+      unclassified       56.6 km  (48%)
+      secondary           2.0 km  (2%)
+      residential         0.9 km  (1%)
+      trunk               0.8 km  (1%)
+      service_other       0.1 km  (0%)
+  edge.use (by distance):
+      road              118.2 km  (100%)
+      track               0.1 km  (0%)
+
+### UTBDR-Mar2026: 15043 raw pts -> 400 sampled (~200m spacing)
+  ERROR: HTTP 400: {"error_code":154,"error":"Path distance exceeds the max distance limit: 200000 meters","status_code":400,"status":"Bad Request"}
+
+### NVBDR-April2026: 8798 raw pts -> 400 sampled (~200m spacing)
+
+======================================================================
+NVBDR-April2026
+  points sent: 400  |  matched: 393/400 (98%)  interpolated: 0  unmatched: 7
+  snap dist (m): p50=2.6  p90=6.5  max=30.8
+  matched path: 146.1 km over 184 edges
+  surface (Valhalla enum, by distance):
+      gravel            119.1 km  (82%)
+      paved_smooth       17.6 km  (12%)
+      dirt                9.4 km  (6%)
+    -> unknown/none surface: 0% of distance
+  road_class (by distance):
+      unclassified       94.8 km  (65%)
+      service_other      25.4 km  (17%)
+      tertiary           18.3 km  (13%)
+      primary             6.9 km  (5%)
+      residential         0.7 km  (0%)
+  edge.use (by distance):
+      road              120.7 km  (83%)
+      track              25.4 km  (17%)
+
+### BDRX-Steens-Alvord-OR-June2025-v2: 3027 raw pts -> 400 sampled (~200m spacing)
+
+======================================================================
+BDRX-Steens-Alvord-OR-June2025-v2
+  points sent: 400  |  matched: 400/400 (100%)  interpolated: 0  unmatched: 0
+  snap dist (m): p50=0.5  p90=4.0  max=26.8
+  matched path: 146.7 km over 156 edges
+  surface (Valhalla enum, by distance):
+      paved_smooth       54.1 km  (37%)
+      dirt               50.6 km  (34%)
+      gravel             41.9 km  (29%)
+    -> unknown/none surface: 0% of distance
+  road_class (by distance):
+      service_other      56.9 km  (39%)
+      tertiary           51.0 km  (35%)
+      secondary          26.5 km  (18%)
+      unclassified       12.3 km  (8%)
+  edge.use (by distance):
+      road               89.8 km  (61%)
+      track              56.6 km  (39%)
+      driveway            0.2 km  (0%)
+
+### white-rim-trails-offroad: 3061 raw pts -> 400 sampled (~200m spacing)
+
+======================================================================
+white-rim-trails-offroad
+  points sent: 400  |  matched: 398/400 (100%)  interpolated: 0  unmatched: 2
+  snap dist (m): p50=0.2  p90=0.4  max=15.3
+  matched path: 92.7 km over 21 edges
+  surface (Valhalla enum, by distance):
+      dirt               92.7 km  (100%)
+    -> unknown/none surface: 0% of distance
+  road_class (by distance):
+      service_other      92.7 km  (100%)
+  edge.use (by distance):
+      track              92.7 km  (100%)
+
+
+######################################################################
+SUMMARY across 5 tracks
+track                                  match%  snap_p90     km  unk_surf%
+WABDR-Apr2026-v2                         100%        7m    99         0%
+COBDR-Mar2026                            100%        7m   118         0%
+NVBDR-April2026                           98%        7m   146         0%
+BDRX-Steens-Alvord-OR-June2025-v2        100%        4m   147         0%
+white-rim-trails-offroad                 100%        0m    93         0%
+
+Aggregate surface mix (by distance, all tracks):
+  gravel            56.4%
+  dirt              27.4%
+  paved_smooth      16.1%
+  compacted          0.0%

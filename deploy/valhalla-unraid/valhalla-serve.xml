@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<!--
+  Custom Unraid template — Valhalla routing service (SERVE only).
+  Runs the OFFICIAL GHCR image in serve-only mode against pre-built tiles in appdata.
+  Tiles are produced separately by deploy/valhalla-unraid/build-tiles.sh.
+  Import: copy to /boot/config/plugins/dockerMan/templates-user/my-valhalla.xml
+          (or Unraid > Docker > Add Container > Template: paste this), then Apply.
+  Keep <Repository> tag in sync with build-tiles.sh IMAGE (tile format is version-tied).
+-->
+<Container version="2">
+  <Name>valhalla</Name>
+  <Repository>djbriane/valhalla:3.8.2</Repository>
+  <Registry>https://hub.docker.com/r/djbriane/valhalla</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support/>
+  <Project>https://github.com/valhalla/valhalla</Project>
+  <Overview>Self-hosted Valhalla routing + trace_attributes service for gpxplore, serving a pre-built us-west tile set from appdata. Serve-only: no auto-build. Tiles built by build-tiles.sh. Front with Cloudflare Tunnel for public/CORS/rate-limit exposure.</Overview>
+  <Category>Other:</Category>
+  <WebUI/>
+  <TemplateURL/>
+  <Icon>https://raw.githubusercontent.com/valhalla/valhalla/master/docs/images/valhalla_logo.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <!-- Serve entrypoint (valhalla_service /data/valhalla.json 1) is baked into djbriane/valhalla — no command args needed. -->
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Requires/>
+  <Config Name="Tiles + config (/data)" Target="/data" Default="/mnt/user/appdata/valhalla/current" Mode="rw" Description="The ACTIVE build: /mnt/user/appdata/valhalla/current is a symlink build-tiles.sh flips to the newest builds/us-west-YYMMDD/ (valhalla.json, tiles/, admins.sqlite, timezones.sqlite, surface_provenance.sqlite, tile_manifest.json). Restart this container after a build or rollback.sh so it re-resolves the symlink. (#14)" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/valhalla/current</Config>
+  <Config Name="API port" Target="8002" Default="8002" Mode="tcp" Description="Valhalla HTTP API (POST /route, /trace_attributes; GET /status). Point cloudflared / the wrapper Worker origin here." Type="Port" Display="always" Required="true" Mask="false">8002</Config>
+</Container>
