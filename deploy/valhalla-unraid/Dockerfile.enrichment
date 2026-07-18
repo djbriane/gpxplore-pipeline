@@ -1,0 +1,23 @@
+# NUC-side surface enrichment helper (#15).
+#
+# Build from the repository root:
+#   docker buildx build --platform linux/amd64 \
+#     -f deploy/valhalla-unraid/Dockerfile.enrichment \
+#     -t djbriane/gpxplore-enrichment:latest .
+FROM python:3.12-alpine
+
+RUN addgroup -S gpxplore && adduser -S -G gpxplore gpxplore
+
+WORKDIR /app
+COPY deploy/valhalla-unraid/enrichment_helper /app/enrichment_helper
+
+USER gpxplore
+EXPOSE 8003
+
+ENV ENRICHMENT_DATA_DIR=/data \
+    ENRICHMENT_HOST=0.0.0.0 \
+    ENRICHMENT_PORT=8003 \
+    PYTHONUNBUFFERED=1 \
+    VALHALLA_URL=http://valhalla:8002
+
+CMD ["python", "-m", "enrichment_helper"]

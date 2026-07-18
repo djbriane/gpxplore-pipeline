@@ -2,7 +2,7 @@
 
 Self-host the gpxplore Valhalla routing service on the home-lab NUC (Unraid, 32 GB). The NUC
 **builds** the us-west tile set (offline, manual cadence) **and serves** it 24/7; Cloudflare
-Tunnel is the public front door. **$0/mo.** Decision context: wayfinder ticket
+Tunnel is the private-origin front door at `valhalla.gpxplore.net`. **$0/mo.** Decision context: wayfinder ticket
 `djbriane/gpxplore-pipeline#8` (see the map, issue #4).
 
 ---
@@ -13,8 +13,10 @@ Tunnel is the public front door. **$0/mo.** Decision context: wayfinder ticket
                 build (occasional, ~20 min)        serve (always-on)
   Geofabrik  ─▶  ghcr.io/valhalla/valhalla  ─▶  /mnt/user/appdata/valhalla  ◀─  djbriane/valhalla
   us-west.pbf     (official image, raw bins)      valhalla.json + tiles/         (your thin image)
-                                                          │  :8002
-   browser ─▶ Cloudflare Worker (wrapper: #10) ─▶ Cloudflare Tunnel ─▶ NUC valhalla container
+   browser ─▶ Cloudflare Worker (#10) ─▶ Cloudflare Tunnel ─┬─▶ Valhalla :8002
+                                                           └─▶ enrichment helper :8003 ─┐
+                                                                 │                     │
+                                              manifest + surface sidecar (/data, ro)    └─▶ Valhalla
 ```
 
 - **Two images, same Valhalla version** (tile format is version-tied):
@@ -48,6 +50,9 @@ Tunnel is the public front door. **$0/mo.** Decision context: wayfinder ticket
 | `Dockerfile` | thin serve image: `FROM ghcr.io/valhalla/valhalla:<ver>` + `valhalla_service` entrypoint |
 | `valhalla-serve.xml` | custom Unraid template → `djbriane/valhalla`, `/data` mount at `…/valhalla/current`, port 8002, no command args |
 | `cloudflared.xml` | custom Unraid template → Cloudflare Tunnel connector (dashboard token model), the outbound-only front door (#14, §7) |
+| `Dockerfile.enrichment` | stdlib Python image for the NUC-side `POST /trace/attributes` helper (#15) |
+| `enrichment-helper.xml` | custom Unraid template → helper, shared read-only `/data`, internal Valhalla URL, port 8003 |
+| `enrichment_helper/` | request validation, ≤190 km/8k-point chunking, Valhalla client, sidecar join, pure normalization, HTTP shell |
 | `build-tiles.sh` | one-shot NUC build: download extract → config/admins/(timezones)/tiles → **surface sidecar (#11)** → provenance manifest → **promote `current` symlink + prune to N-1 (#14)** → restart serve container |
 | `rollback.sh` | repoint `current` at the previous (or a named) retained build + restart serve — no rebuild (#14, §4b) |
 | `build_surface_sidecar.py` | pyosmium pass over the *same* extract → `surface_provenance.sqlite` (`way_id` → explicit surface tags); invoked by `build-tiles.sh` in a throwaway `debian:bookworm-slim` container (#11) |
@@ -92,6 +97,36 @@ curl -s localhost:8002/route --data \
   '{"locations":[{"lat":39.7392,"lon":-104.9903},{"lat":40.015,"lon":-105.2705}],"costing":"motorcycle"}' | head -c 300
 ```
 Geometry back = live.
+
+### 3e. Build and run the enrichment helper (#15)
+
+Build from the **repository root** so the Dockerfile can copy the helper package:
+
+```bash
+docker buildx build --platform linux/amd64 \
+  -f deploy/valhalla-unraid/Dockerfile.enrichment \
+  -t djbriane/gpxplore-enrichment:latest --push .
+```
+
+Import `enrichment-helper.xml` as a second Unraid user template. Put `gpxplore-enrichment`,
+`valhalla`, and `cloudflared` on the same user-defined Docker network; retain
+`VALHALLA_URL=http://valhalla:8002`. Both application containers mount the same
+`/mnt/user/appdata/valhalla/current`, but the helper's mount is **read-only**. Restart both after
+a build or rollback so Docker re-resolves the `current` symlink.
+
+Smoke test from inside the helper container (port 8003 is deliberately **not** published on the NUC
+host; cloudflared reaches it over `gpxplore-net`):
+
+```bash
+docker exec gpxplore-enrichment python -c \
+  'import urllib.request; print(urllib.request.urlopen("http://localhost:8003/version").read().decode())'
+```
+
+The response should carry the active manifest version. A POST through the protected Tunnel should
+return the service envelope (`status`, `match`, `chunks`) plus normalized `segments`,
+`pointRoughness`, and `summary`.
+The helper does not own CORS, public rate limits, Access credentials, or origin-down translation;
+those remain Worker responsibilities fixed by `specs/routing-api-contract--planned.md`.
 
 ---
 
@@ -344,11 +379,16 @@ router.
   user-defined Docker network** and use `http://valhalla:8002`. Cloudflare's own docs recommend keeping
   `cloudflared` on the same network as the origin.
 
-### 7c. Add the public hostname
-Tunnel → **Public Hostnames → Add a public hostname**: Subdomain `valhalla` (or `routing`) · Domain =
-your Cloudflare domain · Service **HTTP** → `<NUC-LAN-IP>:8002` (or `valhalla:8002` if same network) →
-Save. Cloudflare auto-creates the DNS CNAME and terminates TLS at the edge. (The #15 NUC-side helper
-will later add a *second* hostname behind this same tunnel — not a second public surface.)
+### 7c. Add the private origin hostnames
+
+The deployed Valhalla origin is **`valhalla.gpxplore.net`**. Its tunnel route targets
+`http://valhalla:8002` on the shared Docker network (or `<NUC-LAN-IP>:8002` when using the LAN-IP
+form). Cloudflare terminates TLS and the Access application protects the hostname.
+
+Add a second hostname for the helper—`enrichment.gpxplore.net` is the suggested name—routed to
+`http://gpxplore-enrichment:8003` (or `<NUC-LAN-IP>:8003`) behind the **same** tunnel. Apply the same
+Access service-token policy. This is a second private origin hostname, not a second public API: the
+Worker remains the only browser-facing surface.
 
 ### 7d. Lock it down — Cloudflare Access (this is the AC that gives the origin its privacy)
 Straight off §7c the hostname is **wide open** — anyone with the URL can burn the NUC's CPU. Put a
@@ -372,7 +412,7 @@ domain = your `valhalla.<domain>` hostname, then add policies:
 
 ### 7e. Verify end-to-end (AC #14)
 ```bash
-DOMAIN=valhalla.yourdomain.com
+DOMAIN=valhalla.gpxplore.net
 # 1. Uncredentialed public request -> BLOCKED by Access, NOT served by Valhalla:
 curl -s -o /dev/null -w '%{http_code}\n' https://$DOMAIN/status
 #    Expect NOT 200. Exact code depends on which policies are on the app:
@@ -420,3 +460,5 @@ Hetzner CAX11 (~$6.50/mo) — only the origin location changes. See `specs/valha
 | tunnel never goes HEALTHY in the dashboard | wrong/expired `TUNNEL_TOKEN`, or no outbound internet from the NUC | recopy the token from the tunnel's install screen into the `cloudflared` container; confirm the NUC has outbound HTTPS. |
 | cloudflared logs `dial tcp: lookup valhalla … no such host` | hostname points at `valhalla:8002` but the two containers aren't on the same user-defined Docker network | put both on one custom network, or point the public hostname at `<NUC-LAN-IP>:8002` instead (§7b). |
 | every request to the tunnel hostname returns 403 (including your own browser) | Access is doing its job, but there's no policy that admits you | add the **email** Allow policy (§7d) and complete the one-time-PIN login; service-token callers must send the `CF-Access-Client-*` headers. |
+| helper returns `configuration_error` | `/data/tile_manifest.json` or `/data/surface_provenance.sqlite` is absent, unreadable, or their `data_version` values differ | mount the active `…/valhalla/current` build read-only in the helper and rebuild tiles + sidecar together. |
+| helper cannot reach Valhalla | `VALHALLA_URL=http://valhalla:8002` is set but the containers do not share a user-defined network | put them on the same network, or use the stable NUC LAN URL for `VALHALLA_URL`. |

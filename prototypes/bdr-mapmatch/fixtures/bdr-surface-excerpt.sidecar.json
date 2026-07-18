@@ -1,0 +1,16 @@
+{
+  "7001": {
+    "surface": "asphalt",
+    "tracktype": null,
+    "smoothness": "good",
+    "mtb_scale": null,
+    "sac_scale": null
+  },
+  "7004": {
+    "surface": null,
+    "tracktype": "grade1",
+    "smoothness": null,
+    "mtb_scale": null,
+    "sac_scale": null
+  }
+}
