@@ -14,8 +14,17 @@ SURFACE_CLASSES = {
     "path": ("rough", 1.0),
 }
 SURFACE_CLASS_ORDER = ("paved", "compacted", "dirt", "gravel", "rough", "unknown")
+RIDER_SURFACE_CLASS_ORDER = (
+    "paved",
+    "hardpack",
+    "dirt_road",
+    "primitive_road",
+    "loose_gravel",
+    "rough_trail",
+    "unknown",
+)
 UNPAVED_CLASSES = frozenset({"compacted", "dirt", "gravel", "rough"})
-SURFACE_ENGINE_VERSION = "surface-normalization/1"
+SURFACE_ENGINE_VERSION = "surface-normalization/2"
 
 UNKNOWN_ROAD_CLASS_ROUGHNESS = {
     "motorway": 0.0,
@@ -44,6 +53,19 @@ def _edge_key(edge):
         edge.get("road_class"),
         edge.get("use"),
     )
+
+
+def _rider_surface_class(surface_class, is_track):
+    if surface_class == "compacted":
+        return "hardpack"
+    if surface_class == "dirt":
+        return "primitive_road" if is_track else "dirt_road"
+    return {
+        "paved": "paved",
+        "gravel": "loose_gravel",
+        "rough": "rough_trail",
+        "unknown": "unknown",
+    }[surface_class]
 
 
 def _normalized_segment(edge, sidecar, start_m):
@@ -79,6 +101,7 @@ def _normalized_segment(edge, sidecar, start_m):
         "endM": start_m + length_m,
         "lengthM": length_m,
         "surfaceClass": surface_class,
+        "riderSurfaceClass": _rider_surface_class(surface_class, is_track),
         "roughness": roughness,
         "isTrack": is_track,
         "roadClass": edge.get("road_class") or "service_other",
@@ -185,16 +208,25 @@ def normalize_surface(
     ]
 
     by_class_m = {surface_class: 0.0 for surface_class in SURFACE_CLASS_ORDER}
+    by_rider_class_m = {
+        surface_class: 0.0 for surface_class in RIDER_SURFACE_CLASS_ORDER
+    }
     by_confidence_m = {"tagged": 0.0, "inferred": 0.0, "unknown": 0.0}
     track_m = 0.0
     for segment in segments:
         by_class_m[segment["surfaceClass"]] += segment["lengthM"]
+        by_rider_class_m[segment["riderSurfaceClass"]] += segment["lengthM"]
         by_confidence_m[segment["confidence"]] += segment["lengthM"]
         if segment["isTrack"]:
             track_m += segment["lengthM"]
 
     dominant_class = (
         max(SURFACE_CLASS_ORDER, key=by_class_m.__getitem__)
+        if total_length_m
+        else "unknown"
+    )
+    dominant_rider_surface_class = (
+        max(RIDER_SURFACE_CLASS_ORDER, key=by_rider_class_m.__getitem__)
         if total_length_m
         else "unknown"
     )
@@ -205,6 +237,8 @@ def normalize_surface(
     summary = {
         "byClassM": by_class_m,
         "dominantClass": dominant_class,
+        "byRiderClassM": by_rider_class_m,
+        "dominantRiderSurfaceClass": dominant_rider_surface_class,
         "pavedPct": percentage(by_class_m["paved"]),
         "unpavedPct": percentage(
             sum(by_class_m[surface_class] for surface_class in UNPAVED_CLASSES)

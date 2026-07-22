@@ -149,6 +149,25 @@ class EnrichmentServiceTests(unittest.TestCase):
             [segment["surfaceClass"] for segment in result["segments"]],
             ["paved", "gravel", "compacted"],
         )
+        self.assertEqual(
+            [segment["riderSurfaceClass"] for segment in result["segments"]],
+            ["paved", "loose_gravel", "hardpack"],
+        )
+        self.assertEqual(
+            result["summary"]["byRiderClassM"],
+            {
+                "paved": 250.0,
+                "hardpack": 200.0,
+                "dirt_road": 0.0,
+                "primitive_road": 0.0,
+                "loose_gravel": 500.0,
+                "rough_trail": 0.0,
+                "unknown": 0.0,
+            },
+        )
+        self.assertEqual(
+            result["summary"]["dominantRiderSurfaceClass"], "loose_gravel"
+        )
         self.assertEqual(len(result["pointRoughness"]), 4)
         self.assertEqual(result["summary"]["dataVersion"], "us-west-260716")
         self.assertEqual(result["match"]["match_rate"], 1.0)

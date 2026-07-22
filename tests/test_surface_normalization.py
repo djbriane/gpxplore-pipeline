@@ -37,6 +37,7 @@ class NormalizeSurfaceTests(unittest.TestCase):
                 "endM": 250.0,
                 "lengthM": 250.0,
                 "surfaceClass": "paved",
+                "riderSurfaceClass": "paved",
                 "roughness": 0.0,
                 "isTrack": False,
                 "roadClass": "tertiary",
@@ -99,6 +100,16 @@ class NormalizeSurfaceTests(unittest.TestCase):
                     "unknown": 300.0,
                 },
                 "dominantClass": "gravel",
+                "byRiderClassM": {
+                    "paved": 250.0,
+                    "hardpack": 200.0,
+                    "dirt_road": 0.0,
+                    "primitive_road": 0.0,
+                    "loose_gravel": 500.0,
+                    "rough_trail": 0.0,
+                    "unknown": 300.0,
+                },
+                "dominantRiderSurfaceClass": "loose_gravel",
                 "pavedPct": 20.0,
                 "unpavedPct": 56.0,
                 "trackPct": 40.0,
@@ -106,7 +117,7 @@ class NormalizeSurfaceTests(unittest.TestCase):
                 "taggedPct": 36.0,
                 "inferredPct": 40.0,
                 "unknownPct": 24.0,
-                "engineVersion": "surface-normalization/1",
+                "engineVersion": "surface-normalization/2",
                 "dataVersion": "us-west-260716",
             },
         )
@@ -154,6 +165,57 @@ class NormalizeSurfaceTests(unittest.TestCase):
                 ("rough", 1.0),
             ],
         )
+
+    def test_rider_surface_classes_refine_machine_classes_and_sum_route_meters(self):
+        cases = [
+            ("paved_smooth", "road", "paved"),
+            ("compacted", "track", "hardpack"),
+            ("dirt", "road", "dirt_road"),
+            ("dirt", "track", "primitive_road"),
+            ("gravel", "track", "loose_gravel"),
+            ("path", "road", "rough_trail"),
+            ("mystery", "road", "unknown"),
+            ("impassable", "road", None),
+        ]
+        edges = [
+            {
+                "id": index,
+                "way_id": 10_000 + index,
+                "surface": surface,
+                "road_class": "unclassified",
+                "use": use,
+                "length": 0.001,
+            }
+            for index, (surface, use, _) in enumerate(cases)
+        ]
+
+        result = normalize_surface(
+            [{"start_index": 0, "response": {"edges": edges, "matched_points": []}}],
+            {},
+            {"data_version": "test"},
+            point_count=0,
+        )
+
+        expected_classes = [expected for _, _, expected in cases if expected is not None]
+        self.assertEqual(
+            [segment["riderSurfaceClass"] for segment in result["segments"]],
+            expected_classes,
+        )
+        self.assertEqual(
+            result["summary"]["byRiderClassM"],
+            {
+                "paved": 1.0,
+                "hardpack": 1.0,
+                "dirt_road": 1.0,
+                "primitive_road": 1.0,
+                "loose_gravel": 1.0,
+                "rough_trail": 1.0,
+                "unknown": 1.0,
+            },
+        )
+        self.assertEqual(result["summary"]["dominantRiderSurfaceClass"], "paved")
+        self.assertEqual(sum(result["summary"]["byRiderClassM"].values()), 7.0)
+        self.assertEqual(result["summary"]["engineVersion"], "surface-normalization/2")
 
     def test_unknown_without_road_class_uses_known_route_mean(self):
         edges = [
